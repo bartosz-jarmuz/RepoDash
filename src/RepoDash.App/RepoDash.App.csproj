@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>RepoDash.App</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <Page Remove="Themes\Colors.Dark.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RepoDash.Core\RepoDash.Core.csproj" />
+    <ProjectReference Include="..\RepoDash.Infrastructure\RepoDash.Infrastructure.csproj" />
+    <ProjectReference Include="..\RepoDash.Persistence\RepoDash.Persistence.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Themes\Colors.Dark.xaml" />
+    <Resource Include="Themes\Styles.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Controls\NumericUpDown.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+</Project>

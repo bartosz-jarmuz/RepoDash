@@ -1,0 +1,39 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Base surface & text -->
+  <Color x:Key="WindowBg">#FFFFFFFF</Color>
+  <!-- white -->
+  <Color x:Key="CardBg">#FFF7F9FB</Color>
+  <!-- very light gray-blue -->
+  <Color x:Key="TextMain">#FF111418</Color>
+  <!-- near-black -->
+  <Color x:Key="TextSubtle">#FF5A646E</Color>
+  <!-- mid gray -->
+  <Color x:Key="Border">#FFDFE5EB</Color>
+  <!-- light border -->
+
+  <!-- Accents -->
+  <Color x:Key="Accent">#FF2E6BE6</Color>
+  <!-- blue -->
+  <Color x:Key="AccentHover">#FF2354B6</Color>
+
+  <!-- Status (for later git states) -->
+  <Color x:Key="Success">#FF2FAA60</Color>
+  <Color x:Key="Warning">#FFCB7A11</Color>
+  <Color x:Key="Info">#FF2E6BE6</Color>
+
+  <!-- Brushes -->
+  <SolidColorBrush x:Key="BrushWindowBg" Color="{StaticResource WindowBg}"/>
+  <SolidColorBrush x:Key="BrushCardBg" Color="{StaticResource CardBg}"/>
+  <SolidColorBrush x:Key="BrushTextMain" Color="{StaticResource TextMain}"/>
+  <SolidColorBrush x:Key="BrushTextSubtle" Color="{StaticResource TextSubtle}"/>
+  <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource Border}"/>
+  <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource Accent}"/>
+  <SolidColorBrush x:Key="BrushAccentHover" Color="{StaticResource AccentHover}"/>
+
+  <!-- Optional future use -->
+  <SolidColorBrush x:Key="BrushSuccess" Color="{StaticResource Success}"/>
+  <SolidColorBrush x:Key="BrushWarning" Color="{StaticResource Warning}"/>
+  <SolidColorBrush x:Key="BrushInfo" Color="{StaticResource Info}"/>
+</ResourceDictionary>
