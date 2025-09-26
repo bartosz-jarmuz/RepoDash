@@ -1,0 +1,35 @@
+# Build artifacts
+bin/
+obj/
+/artifacts/
+/.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# Rider / JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Misc
+Thumbs.db
+*.DS_Store
+
+# Test results
+TestResult*/
+.coverage
+.coveragexml
+
+# Generated
+docs/FakeRepos/out/

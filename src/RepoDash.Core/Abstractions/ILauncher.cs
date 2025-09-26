@@ -1,0 +1,9 @@
+namespace RepoDash.Core.Abstractions;
+
+public interface ILauncher
+{
+    void OpenSolution(string solutionPath);
+    void OpenFolder(string folderPath);
+    void OpenUrl(Uri url);
+    void OpenGitUi(string repoPath);
+}

@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Color x:Key="BaseBg">#121417</Color>
+  <Color x:Key="CardBg">#1C2127</Color>
+  <Color x:Key="TextMain">#E6EAF0</Color>
+  <Color x:Key="TextSubtle">#AAB2BF</Color>
+  <SolidColorBrush x:Key="BrushBaseBg" Color="{StaticResource BaseBg}"/>
+  <SolidColorBrush x:Key="BrushCardBg" Color="{StaticResource CardBg}"/>
+  <SolidColorBrush x:Key="BrushTextMain" Color="{StaticResource TextMain}"/>
+  <SolidColorBrush x:Key="BrushTextSubtle" Color="{StaticResource TextSubtle}"/>
+  <SolidColorBrush x:Key="BranchUpToDateBrush" Color="#31C48D"/>
+  <SolidColorBrush x:Key="BranchAheadBrush" Color="#60A5FA"/>
+  <SolidColorBrush x:Key="BranchBehindBrush" Color="#F59E0B"/>
+</ResourceDictionary>
