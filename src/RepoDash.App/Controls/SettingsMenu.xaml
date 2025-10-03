@@ -1,0 +1,23 @@
+﻿<UserControl x:Class="RepoDash.App.Controls.SettingsMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:SettingsMenuViewModel}">
+  <Menu VerticalAlignment="Center">
+    <MenuItem Header="Git">
+      <MenuItem Header="Fetch all" Command="{Binding GitFetchAllAsyncCommand}"/>
+      <MenuItem Header="Pull all (merge)" Command="{Binding GitPullAllAsyncCommand}"/>
+      <MenuItem Header="Pull all (rebase)" Command="{Binding GitPullRebaseAllAsyncCommand}"/>
+    </MenuItem>
+    <MenuItem Header="Settings">
+      <MenuItem Header="General"/>
+      <MenuItem Header="Repositories"/>
+      <MenuItem Header="Shortcuts"/>
+      <MenuItem Header="Colors"/>
+      <MenuItem Header="External Tools"/>
+    </MenuItem>
+  </Menu>
+</UserControl>

@@ -1,0 +1,42 @@
+﻿<UserControl x:Class="RepoDash.App.Controls.RepoRoot"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:RepoRootViewModel}"
+             >
+  <Grid Margin="0,0,8,0">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition/>
+      <!-- TextBox -->
+      <ColumnDefinition Width="Auto"/>
+      <!-- Browse -->
+      <ColumnDefinition Width="Auto"/>
+      <!-- Refresh -->
+    </Grid.ColumnDefinitions>
+
+    <TextBox Text="{Binding RepoRootInput, UpdateSourceTrigger=PropertyChanged}"
+             VerticalAlignment="Center" Height="36" Padding="8"
+             ToolTip="Change path and press Enter, click Browse, or Refresh">
+      <TextBox.InputBindings>
+        <KeyBinding Key="Enter" Command="{Binding LoadCommand}" />
+      </TextBox.InputBindings>
+    </TextBox>
+
+    <Button Grid.Column="1"
+            Command="{Binding BrowseCommand}"
+            Style="{StaticResource IconFlatButton}"
+            ToolTip="Browse for repo root">
+      <TextBlock Text="📁" FontSize="14"/>
+    </Button>
+
+    <Button Grid.Column="2"
+            Command="{Binding LoadCommand}"
+            Style="{StaticResource IconFlatButton}"
+            ToolTip="Refresh (reload current root)">
+      <TextBlock Text="↻" FontSize="14"/>
+    </Button>
+  </Grid>
+</UserControl>

@@ -12,7 +12,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = App.Services.GetRequiredService<MainViewModel>();
-        Loaded += async (_, __) => await ((MainViewModel)DataContext).LoadCurrentRootAsync();
+        Loaded += async (_, __) =>
+        {
+            // DataContext is set in XAML via ViewModelLocator
+            if (DataContext is MainViewModel vm)
+                await vm.LoadCurrentRootAsync();
+        };
     }
 
     private async void RepoRoot_KeyDown(object sender, KeyEventArgs e)

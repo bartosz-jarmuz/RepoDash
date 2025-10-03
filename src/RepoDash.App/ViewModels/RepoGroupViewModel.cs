@@ -1,17 +1,26 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using RepoDash.Core.Models;
 
 namespace RepoDash.App.ViewModels;
 
 public partial class RepoGroupViewModel : ObservableObject
 {
+    public RepoGroupViewModel(GeneralSettings settings)
+    {
+        _settings = settings;
+    }
+
     [ObservableProperty] private string _groupKey = string.Empty;
 
     // All items (unfiltered)
     private readonly List<RepoItemViewModel> _allItems = new();
+    
+    private GeneralSettings _settings;
 
     // UI-bound filtered collection
     public ObservableCollection<RepoItemViewModel> Items { get; } = new();
+    public GeneralSettings Settings => _settings;
 
     public void SetItems(IEnumerable<RepoItemViewModel> items)
     {
