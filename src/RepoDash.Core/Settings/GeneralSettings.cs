@@ -1,4 +1,4 @@
-namespace RepoDash.Core.Models;
+﻿namespace RepoDash.Core.Settings;
 
 public sealed class GeneralSettings
 {

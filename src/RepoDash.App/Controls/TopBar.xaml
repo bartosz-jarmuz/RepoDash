@@ -10,17 +10,12 @@
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />
-      <!-- Search -->
       <ColumnDefinition Width="Auto" />
-      <!-- List Height -->
       <ColumnDefinition Width="Auto" />
-      <!-- Panel Width -->
       <ColumnDefinition Width="Auto" />
-      <!-- Group Segment -->
       <ColumnDefinition Width="*" />
-      <!-- Repo Root -->
       <ColumnDefinition Width="Auto" />
-      <!-- Settings -->
+      <ColumnDefinition Width="Auto" />
     </Grid.ColumnDefinitions>
 
     <!-- Search (its own VM) -->
@@ -30,28 +25,30 @@
     <!-- List height -->
     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
       <TextBlock Text="List Height:" Margin="0,0,6,0" VerticalAlignment="Center"/>
-      <TextBox Text="{Binding Settings.ListItemVisibleCount}" Width="60" Height="36"/>
+      <TextBox Text="{Binding Settings.ListItemVisibleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="60" Height="36"/>
     </StackPanel>
 
     <!-- Panel width -->
     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
       <TextBlock Text="Panel Width:" Margin="0,0,6,0" VerticalAlignment="Center"/>
-      <TextBox Text="{Binding Settings.GroupPanelWidth}" Width="80" Height="36"/>
+      <TextBox Text="{Binding Settings.GroupPanelWidth,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="80" Height="36"/>
     </StackPanel>
 
     <!-- Group segment -->
     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
       <TextBlock Text="Group Segment:" Margin="0,0,6,0" VerticalAlignment="Center"/>
-      <TextBox Text="{Binding Settings.GroupingSegment}" Width="60" Height="36"
+      <TextBox Text="{Binding Settings.GroupingSegment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="60" Height="36"
                ToolTip="Which relative path segment (from the end) defines the group"/>
     </StackPanel>
 
-    <!-- Repo root selector (its own VM) -->
     <controls:RepoRoot Grid.Column="4" Margin="0,0,8,0"
                        DataContext="{Binding RepoRoot}"/>
 
+    <controls:GlobalGitOperationsMenu Grid.Column="5" VerticalAlignment="Center"
+                           DataContext="{Binding GlobalGitOperations}"/>
+
     <!-- Settings / Git menu (its own VM) -->
-    <controls:SettingsMenu Grid.Column="5" VerticalAlignment="Center"
+    <controls:SettingsMenu Grid.Column="6" VerticalAlignment="Center"
                            DataContext="{Binding SettingsMenu}"/>
   </Grid>
 </UserControl>

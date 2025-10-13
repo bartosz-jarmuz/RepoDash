@@ -1,12 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using RepoDash.Core.Models;
+using RepoDash.App.Abstractions;
+using RepoDash.Core.Settings;
 
 namespace RepoDash.App.ViewModels;
 
 public partial class RepoGroupViewModel : ObservableObject
 {
-    public RepoGroupViewModel(GeneralSettings settings)
+    public RepoGroupViewModel(IReadOnlySettingsSource<GeneralSettings> settings)
     {
         _settings = settings;
     }
@@ -16,11 +17,11 @@ public partial class RepoGroupViewModel : ObservableObject
     // All items (unfiltered)
     private readonly List<RepoItemViewModel> _allItems = new();
     
-    private GeneralSettings _settings;
+    private IReadOnlySettingsSource<GeneralSettings> _settings;
 
     // UI-bound filtered collection
     public ObservableCollection<RepoItemViewModel> Items { get; } = new();
-    public GeneralSettings Settings => _settings;
+    public GeneralSettings Settings => _settings.Current;
 
     public void SetItems(IEnumerable<RepoItemViewModel> items)
     {

@@ -1,20 +1,20 @@
 ﻿using System.Diagnostics;
 using RepoDash.Core.Abstractions;
-using RepoDash.Core.Models;
+using RepoDash.Core.Settings;
 
 namespace RepoDash.Infrastructure.Processes;
 
 public sealed class Launcher : ILauncher
 {
-    private readonly Func<GeneralSettings> _settings;
-    public Launcher(Func<GeneralSettings> settingsAccessor) => _settings = settingsAccessor;
+    private readonly ISettingsStore<GeneralSettings> _settings;
+    public Launcher(ISettingsStore<GeneralSettings> settings) => _settings = settings;
 
     public void OpenSolution(string solutionPath)
         => Process.Start(new ProcessStartInfo(solutionPath) { UseShellExecute = true });
 
     public void OpenFolder(string folderPath)
     {
-        var tc = _settings().TotalCommanderPath;
+        var tc = _settings.Current.TotalCommanderPath;
         if (!string.IsNullOrWhiteSpace(tc) && File.Exists(tc))
             Process.Start(new ProcessStartInfo(tc, $"/O /T /L=\"{folderPath}\"") { UseShellExecute = true });
         else
@@ -26,7 +26,7 @@ public sealed class Launcher : ILauncher
 
     public void OpenGitUi(string repoPath)
     {
-        var tool = _settings().GitUiPath;
+        var tool = _settings.Current.GitUiPath;
         if (!string.IsNullOrWhiteSpace(tool) && File.Exists(tool))
             Process.Start(new ProcessStartInfo(tool, $"\"{repoPath}\"") { UseShellExecute = true });
         else

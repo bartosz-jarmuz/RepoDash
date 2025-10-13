@@ -1,13 +1,14 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using RepoDash.Core.Abstractions;
-using RepoDash.Core.Models;
 using System.IO;
+using RepoDash.App.Abstractions;
+using RepoDash.Core.Settings;
 
 namespace RepoDash.App.ViewModels;
 
 public class MainViewModel : ObservableObject
 {
-    private readonly GeneralSettings _settings;
+    private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
     private readonly IRepoScanner _scanner;
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
@@ -17,15 +18,17 @@ public class MainViewModel : ObservableObject
     public RepoRootViewModel RepoRoot { get; }
     public SettingsMenuViewModel SettingsMenu { get; }
     public RepoGroupsViewModel RepoGroups { get; }
+    public GlobalGitOperationsMenuViewModel GlobalGitOperations { get; }
 
     public MainViewModel(
-        GeneralSettings settings,
+        IReadOnlySettingsSource<GeneralSettings> generalSettings,
         IRepoScanner scanner,
         ILauncher launcher,
         IGitService git,
-        IRemoteLinkProvider links)
+        IRemoteLinkProvider links,
+        SettingsMenuViewModel settingsMenuVm)
     {
-        _settings = settings;
+        _generalSettings = generalSettings;
         _scanner = scanner;
         _launcher = launcher;
         _git = git;
@@ -34,11 +37,12 @@ public class MainViewModel : ObservableObject
         // Child VMs
         SearchBar = new SearchBarViewModel();
         RepoRoot = new RepoRootViewModel();
-        SettingsMenu = new SettingsMenuViewModel();
-        RepoGroups = new RepoGroupsViewModel(settings);
+        SettingsMenu = settingsMenuVm;
+        RepoGroups = new RepoGroupsViewModel(_generalSettings);
+        GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
 
         // Initial values
-        RepoRoot.RepoRootInput = _settings.RepoRoot;
+        RepoRoot.RepoRootInput = _generalSettings.Current.RepoRoot;
 
         // Wiring
         SearchBar.OnFilterChanged = term => RepoGroups.ApplyFilter(term ?? string.Empty);
@@ -61,13 +65,13 @@ public class MainViewModel : ObservableObject
 
         RepoRoot.OnLoad = () => LoadCurrentRootAsync();
 
-        SettingsMenu.ResolveGitRepos = () => RepoGroups.GetAllRepoItems();
-        SettingsMenu.OnFetchAll = async repos =>
+        GlobalGitOperations.ResolveGitRepos = () => RepoGroups.GetAllRepoItems();
+        GlobalGitOperations.OnFetchAll = async repos =>
         {
             await Task.WhenAll(repos.Select(r => _git.FetchAsync(r.Path, CancellationToken.None)));
             await Task.WhenAll(repos.Select(r => r.RefreshStatusAsync(CancellationToken.None)));
         };
-        SettingsMenu.OnPullAll = async (repos, rebase) =>
+        GlobalGitOperations.OnPullAll = async (repos, rebase) =>
         {
             foreach (var r in repos)
             {
@@ -78,7 +82,7 @@ public class MainViewModel : ObservableObject
         };
     }
 
-    public GeneralSettings Settings => _settings;
+    public GeneralSettings Settings => _generalSettings.Current;
 
     // Called by code-behind on startup and by RepoRoot.OnLoad
     public async Task LoadCurrentRootAsync()
@@ -87,9 +91,9 @@ public class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             return;
 
-        _settings.RepoRoot = root; // persistence saves later
+        _generalSettings.Current.RepoRoot = root; // persistence saves later
 
-        var scanned = await _scanner.ScanAsync(root, _settings.GroupingSegment, CancellationToken.None);
+        var scanned = await _scanner.ScanAsync(root, _generalSettings.Current.GroupingSegment, CancellationToken.None);
 
         // Project to item VMs and let RepoGroups own the collections & filtering
         var itemsByGroup = scanned

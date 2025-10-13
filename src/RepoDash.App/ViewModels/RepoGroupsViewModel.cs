@@ -1,19 +1,20 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using RepoDash.Core.Models;
 using System.Collections.ObjectModel;
+using RepoDash.App.Abstractions;
+using RepoDash.Core.Settings;
 
 namespace RepoDash.App.ViewModels;
 
 public partial class RepoGroupsViewModel : ObservableObject
 {
-    private readonly GeneralSettings _settings;
+    private readonly IReadOnlySettingsSource<GeneralSettings> _settings;
 
-    public RepoGroupsViewModel(GeneralSettings settings)
+    public RepoGroupsViewModel(IReadOnlySettingsSource<GeneralSettings> settings)
     {
         _settings = settings;
     }
 
-    public GeneralSettings Settings => _settings; 
+    public GeneralSettings Settings => _settings.Current;
 
     public ObservableCollection<RepoGroupViewModel> Groups { get; } = new();
 
@@ -35,6 +36,9 @@ public partial class RepoGroupsViewModel : ObservableObject
             g.ApplyFilter(term ?? string.Empty);
     }
 
-    public IReadOnlyList<RepoItemViewModel> GetAllRepoItems()
-        => Groups.SelectMany(g => g.Items).Where(i => i.HasGit).ToList();
+    public IReadOnlyList<RepoItemViewModel> GetAllRepoItems() =>
+        Groups
+            .SelectMany(g => g.Items)
+            .Where(i => i.HasGit)
+            .ToList();
 }

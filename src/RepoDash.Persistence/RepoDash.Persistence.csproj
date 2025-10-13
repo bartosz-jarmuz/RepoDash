@@ -3,4 +3,7 @@
     <RootNamespace>RepoDash.Persistence</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RepoDash.Core\RepoDash.Core.csproj" />
+  </ItemGroup>
 </Project>

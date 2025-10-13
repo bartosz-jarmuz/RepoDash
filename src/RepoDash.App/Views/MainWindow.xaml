@@ -5,7 +5,7 @@
         xmlns:converters="clr-namespace:RepoDash.App.Converters"
         xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
         Title="RepoDash" Width="1200" Height="800"
-        DataContext="{x:Static vm:ViewModelLocator.Main}">
+        >
   <DockPanel>
     <!-- Top bar as a single control; it composes child controls -->
     <controls:TopBar DockPanel.Dock="Top" DataContext="{Binding}" Margin="10"/>

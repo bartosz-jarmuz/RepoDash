@@ -7,17 +7,12 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:SettingsMenuViewModel}">
   <Menu VerticalAlignment="Center">
-    <MenuItem Header="Git">
-      <MenuItem Header="Fetch all" Command="{Binding GitFetchAllAsyncCommand}"/>
-      <MenuItem Header="Pull all (merge)" Command="{Binding GitPullAllAsyncCommand}"/>
-      <MenuItem Header="Pull all (rebase)" Command="{Binding GitPullRebaseAllAsyncCommand}"/>
-    </MenuItem>
     <MenuItem Header="Settings">
-      <MenuItem Header="General"/>
-      <MenuItem Header="Repositories"/>
-      <MenuItem Header="Shortcuts"/>
-      <MenuItem Header="Colors"/>
-      <MenuItem Header="External Tools"/>
+      <MenuItem Header="General" Command="{Binding OpenGeneralSettingsCommand}" />
+      <MenuItem Header="Repositories" Command="{Binding OpenRepositoriesSettingsCommand}" />
+      <MenuItem Header="Shortcuts" Command="{Binding OpenShortcutsSettingsCommand}" />
+      <MenuItem Header="Colors" Command="{Binding OpenColorSettingsCommand}" />
+      <MenuItem Header="External Tools" Command="{Binding OpenExternalToolsSettingsCommand}" />
     </MenuItem>
   </Menu>
 </UserControl>
