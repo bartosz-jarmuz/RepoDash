@@ -1,8 +1,8 @@
-﻿using System.Text;
+﻿using RepoDash.Core.Abstractions;
+using RepoDash.Persistence.Paths;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RepoDash.Core.Abstractions;
-using RepoDash.Persistence.Paths;
 
 namespace RepoDash.Persistence.FileStores;
 

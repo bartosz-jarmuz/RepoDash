@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RepoDash.App.Abstractions;
 using RepoDash.Core.Abstractions;
+using RepoDash.Core.Caching;
 using RepoDash.Core.Settings;
 using System.IO;
 using System.Windows.Threading;
@@ -12,34 +13,20 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
     private readonly ISettingsStore<GeneralSettings> _generalStore;
-    private readonly IRepoScanner _scanner;
+    private readonly IRepoScanner _scanner; // still injected (used by RepoCacheService)
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
     private readonly IBranchProvider _branchProvider;
     private readonly IRemoteLinkProvider _links;
+    private readonly RepoCacheService _cacheService;
+
+    [ObservableProperty] private bool _focusSearchRequested;
 
     public SearchBarViewModel SearchBar { get; }
     public RepoRootViewModel RepoRoot { get; }
     public SettingsMenuViewModel SettingsMenu { get; }
     public RepoGroupsViewModel RepoGroups { get; }
     public GlobalGitOperationsMenuViewModel GlobalGitOperations { get; }
-
-    [ObservableProperty]
-    private bool _focusSearchRequested;
-
-    [RelayCommand]
-    private void ApplyUiSettings()
-    {
-        Settings.ListItemVisibleCount = Math.Max(1, Settings.ListItemVisibleCount);
-        Settings.GroupPanelWidth = Math.Max(1, Settings.GroupPanelWidth);
-        Settings.GroupingSegment = Math.Max(1, Settings.GroupingSegment);
-    }
-
-    [RelayCommand]
-    private void FocusSearch()
-    {
-        RequestFocusSearch();
-    }
 
     public MainViewModel(
         IReadOnlySettingsSource<GeneralSettings> generalSettings,
@@ -49,7 +36,8 @@ public partial class MainViewModel : ObservableObject
         IGitService git,
         IBranchProvider branchProvider,
         IRemoteLinkProvider links,
-        SettingsMenuViewModel settingsMenuVm)
+        SettingsMenuViewModel settingsMenuVm,
+        RepoCacheService cacheService)
     {
         _generalSettings = generalSettings;
         _generalStore = generalStore;
@@ -58,6 +46,7 @@ public partial class MainViewModel : ObservableObject
         _git = git;
         _branchProvider = branchProvider;
         _links = links;
+        _cacheService = cacheService;
 
         // Child VMs
         SearchBar = new SearchBarViewModel();
@@ -74,14 +63,15 @@ public partial class MainViewModel : ObservableObject
 
         RepoRoot.OnBrowse = () =>
         {
-            using var dlg = new FolderBrowserDialog
+            using var dlg = new System.Windows.Forms.FolderBrowserDialog
             {
-                Description = "Select Repo Root",
-                SelectedPath = Directory.Exists(RepoRoot.RepoRootInput)
-                    ? RepoRoot.RepoRootInput
+                AutoUpgradeEnabled = true,
+                ShowNewFolderButton = false,
+                InitialDirectory = Directory.Exists(_generalSettings.Current.RepoRoot)
+                    ? _generalSettings.Current.RepoRoot
                     : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
             };
-            if (dlg.ShowDialog() == DialogResult.OK)
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 RepoRoot.RepoRootInput = dlg.SelectedPath;
                 _ = LoadCurrentRootAsync();
@@ -124,49 +114,96 @@ public partial class MainViewModel : ObservableObject
 
     public GeneralSettings Settings => _generalSettings.Current;
 
-    // Called by code-behind on startup and by RepoRoot.OnLoad
+    private CancellationTokenSource? _refreshCts;
+
+    [RelayCommand]
     public async Task LoadCurrentRootAsync()
     {
         var root = RepoRoot.RepoRootInput?.Trim();
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             return;
 
-        _generalSettings.Current.RepoRoot = root; // persistence saves later
+        // Keep your persistence semantics
+        _generalSettings.Current.RepoRoot = root;
 
-        var scanned = await _scanner.ScanAsync(root, _generalSettings.Current.GroupingSegment, CancellationToken.None);
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        var ct = _refreshCts.Token;
 
-        // Project to item VMs and let RepoGroups own the collections & filtering
-        var itemsByGroup = scanned
-            .GroupBy(i => i.GroupKey, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderBy(x => x.RepoName, StringComparer.OrdinalIgnoreCase)
-                      .Select(r =>
-                      {
-                          var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider)
-                          {
-                              Name = r.RepoName,
-                              Path = r.RepoPath,
-                              HasGit = r.HasGit,
-                              HasSolution = r.HasSolution,
-                              SolutionPath = r.SolutionPath
-                          };
-                          _ = vm.RefreshStatusAsync(CancellationToken.None);
-                          return vm;
-                      }).ToList());
+        // 1) paint from cache immediately
+        var cached = await _cacheService.LoadFromCacheAsync(root, ct);
+        ApplySnapshot(cached);
 
-        RepoGroups.Load(itemsByGroup);
-        // apply current filter
-        RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+        // 2) background refresh with streaming upserts
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _cacheService.RefreshAsync(
+                    root,
+                    groupingSegment: _generalSettings.Current.GroupingSegment,
+                    upsert: repo => Dispatch(() => Upsert(repo)),
+                    removeByRepoPath: repoPath => Dispatch(() => RepoGroups.RemoveByRepoPath(repoPath)),
+                    ct);
+            }
+            catch
+            {
+                // best effort
+            }
+        }, ct);
 
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(WindowTitle));
+    }
+
+    private void ApplySnapshot(IReadOnlyList<CachedRepo> snapshot)
+    {
+        var itemsByGroup = new Dictionary<string, List<RepoItemViewModel>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in snapshot)
+        {
+            if (!itemsByGroup.TryGetValue(r.GroupKey, out var list))
+            {
+                list = [];
+                itemsByGroup[r.GroupKey] = list;
+            }
+            var vm = MakeRepoItemVm(r);
+            list.Add(vm);
+        }
+
+        RepoGroups.Load(itemsByGroup);
+        RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+    }
+
+    private void Upsert(CachedRepo r)
+    {
+        var vm = MakeRepoItemVm(r);
+        RepoGroups.Upsert(r.GroupKey, vm);
+    }
+
+    private RepoItemViewModel MakeRepoItemVm(CachedRepo r)
+    {
+        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider)
+        {
+            Name = r.RepoName,
+            Path = r.RepoPath,
+            HasGit = r.HasGit,
+            HasSolution = r.HasSolution,
+            SolutionPath = r.SolutionPath
+        };
+        // use lightweight branch load first; heavy status can be triggered by user or virtualization
+        _ = vm.EnsureBranchLoadedAsync();
+        return vm;
     }
 
     public void RequestFocusSearch()
     {
         FocusSearchRequested = true;
         App.Current?.Dispatcher.InvokeAsync(() => FocusSearchRequested = false, DispatcherPriority.ApplicationIdle);
+    }
+
+    static void Dispatch(Action a)
+    {
+        if (System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true) a();
+        else System.Windows.Application.Current?.Dispatcher?.Invoke(a);
     }
 }

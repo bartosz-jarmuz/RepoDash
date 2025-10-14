@@ -14,21 +14,20 @@ public partial class RepoGroupViewModel : ObservableObject
     }
 
     [ObservableProperty] private string _groupKey = string.Empty;
+    [ObservableProperty] private ObservableCollection<RepoItemViewModel> _items = [];
+    private readonly List<RepoItemViewModel> _allItems = [];
+    private readonly IReadOnlySettingsSource<GeneralSettings> _settings;
 
-    // All items (unfiltered)
-    private readonly List<RepoItemViewModel> _allItems = new();
-    
-    private IReadOnlySettingsSource<GeneralSettings> _settings;
-
-    // UI-bound filtered collection
-    public ObservableCollection<RepoItemViewModel> Items { get; } = new();
     public GeneralSettings Settings => _settings.Current;
 
     public void SetItems(IEnumerable<RepoItemViewModel> items)
     {
         _allItems.Clear();
         _allItems.AddRange(items);
-        ApplyFilter(string.Empty);
+
+        Items.Clear();
+        foreach (var r in _allItems.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+            Items.Add(r);
     }
 
     public void ApplyFilter(string term)
@@ -43,7 +42,32 @@ public partial class RepoGroupViewModel : ObservableObject
                 r.Path.Contains(term, StringComparison.OrdinalIgnoreCase));
         }
 
-        foreach (var r in query)
+        foreach (var r in query.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
             Items.Add(r);
+    }
+
+    public void Upsert(RepoItemViewModel item)
+    {
+        var existing = _allItems.FirstOrDefault(i => string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+        {
+            _allItems.Add(item);
+        }
+        else
+        {
+            existing.Name = item.Name;
+            existing.HasGit = item.HasGit;
+            existing.HasSolution = item.HasSolution;
+            existing.SolutionPath = item.SolutionPath;
+        }
+    }
+
+    public bool RemoveByPath(string repoPath)
+    {
+        var existing = _allItems.FirstOrDefault(i => string.Equals(i.Path, repoPath, StringComparison.OrdinalIgnoreCase));
+        if (existing is null) return false;
+        _allItems.Remove(existing);
+        Items.Remove(existing);
+        return true;
     }
 }

@@ -14,7 +14,9 @@ using RepoDash.Persistence.Paths;
 using System.IO;
 using System.Windows;
 using RepoDash.App.Windowing;
+using RepoDash.Core.Caching;
 using Application = System.Windows.Application;
+using JsonRepoCacheStore = RepoDash.Persistence.FileStores.JsonRepoCacheStore;
 
 namespace RepoDash.App;
 
@@ -38,6 +40,10 @@ public partial class App : Application
         sc.AddSingleton<ILauncher, Launcher>();
         sc.AddSingleton<IRepoScanner, FileSystemRepoScanner>();
         sc.AddSingleton<IUiDispatcher>(_ => new WpfUiDispatcher(Current.Dispatcher));
+
+
+        sc.AddSingleton<IRepoCacheStore, JsonRepoCacheStore>();
+        sc.AddSingleton<RepoCacheService>();
 
         sc.AddSingleton<ViewModels.MainViewModel>();
 

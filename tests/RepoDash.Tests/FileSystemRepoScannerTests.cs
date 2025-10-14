@@ -12,13 +12,13 @@ namespace RepoDash.Tests
     public sealed class FileSystemRepoScannerTests
     {
         [Test]
-        public async Task ScanAsync_LargeSystem_AllAndOnlyCreatedReposAreDiscovered()
+        public void ScanAsync_LargeSystem_AllAndOnlyCreatedReposAreDiscovered()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
 
             var scanner = MakeScanner(new RepositoriesSettings());
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             var discovered = repos.Select(r => r.RepoPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var expected = layout.AllRepos.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -31,13 +31,13 @@ namespace RepoDash.Tests
         }
 
         [Test]
-        public async Task ScanAsync_SqlReposWithoutSolution_AreIncludedWithHasSolutionFalse()
+        public void ScanAsync_SqlReposWithoutSolution_AreIncludedWithHasSolutionFalse()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
 
             var scanner = MakeScanner(new RepositoriesSettings());
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             foreach (var sqlPath in layout.Sql)
             {
@@ -48,7 +48,7 @@ namespace RepoDash.Tests
         }
 
         [Test]
-        public async Task ScanAsync_IgnoredFragments_ByRepoPath_ExactlyIgnoredReposAreExcluded()
+        public void ScanAsync_IgnoredFragments_ByRepoPath_ExactlyIgnoredReposAreExcluded()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
@@ -57,7 +57,7 @@ namespace RepoDash.Tests
             settings.ExcludedPathParts.Add(Path.DirectorySeparatorChar + "utilities" + Path.DirectorySeparatorChar);
 
             var scanner = MakeScanner(settings);
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             var discovered = repos.Select(r => r.RepoPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var expected = layout.AllRepos.Except(layout.Utilities, StringComparer.OrdinalIgnoreCase).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -67,7 +67,7 @@ namespace RepoDash.Tests
         }
 
         [Test]
-        public async Task ScanAsync_IgnoredFragments_BySolutionName_OnlyMatchingReposAreExcluded()
+        public void ScanAsync_IgnoredFragments_BySolutionName_OnlyMatchingReposAreExcluded()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
@@ -77,7 +77,7 @@ namespace RepoDash.Tests
             settings.ExcludedPathParts.Add("  SecretRotator  "); // also tests trim + case-insensitive
 
             var scanner = MakeScanner(settings);
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             var discovered = repos.Select(r => r.RepoPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var expected = layout.AllRepos
@@ -89,7 +89,7 @@ namespace RepoDash.Tests
         }
 
         [Test]
-        public async Task ScanAsync_CategoryOverride_FirstMatchWins_WhenMultipleRulesMatch()
+        public void ScanAsync_CategoryOverride_FirstMatchWins_WhenMultipleRulesMatch()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
@@ -102,14 +102,14 @@ namespace RepoDash.Tests
             settings.CategoryOverrides.Add(new CategoryOverride { Category = "Platform", Matches = { "Service" } });
 
             var scanner = MakeScanner(settings);
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             var hit = repos.Single(r => PathsEqual(r.RepoPath, target));
             Assert.That(hit.GroupKey, Is.EqualTo("Edge")); // first match wins
         }
 
         [Test]
-        public async Task ScanAsync_CategoryOverride_BySolutionName_GroupKeyIsOverridden()
+        public void ScanAsync_CategoryOverride_BySolutionName_GroupKeyIsOverridden()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
@@ -120,14 +120,14 @@ namespace RepoDash.Tests
             settings.CategoryOverrides.Add(new CategoryOverride { Category = "Contracts", Matches = { "userprofileservice" } }); // case-insensitive
 
             var scanner = MakeScanner(settings);
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             var hit = repos.Single(r => PathsEqual(r.RepoPath, target));
             Assert.That(hit.GroupKey, Is.EqualTo("Contracts"));
         }
 
         [Test]
-        public async Task ScanAsync_GroupingSegment_NthSegmentFromEnd_GroupKeyChangesAsExpected()
+        public void ScanAsync_GroupingSegment_NthSegmentFromEnd_GroupKeyChangesAsExpected()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
@@ -135,40 +135,40 @@ namespace RepoDash.Tests
             var target = layout.Services.Single(p => p.EndsWith(Path.Combine("services", "orders", "OrderService")));
             var scanner = MakeScanner(new RepositoriesSettings());
 
-            var r1 = await scanner.ScanAsync(layout.Root, groupingSegment: 1, CancellationToken.None);
+            var r1 = scanner.ScanAsync(layout.Root, groupingSegment: 1, CancellationToken.None).ToBlockingEnumerable();
             var s1 = r1.Single(r => PathsEqual(r.RepoPath, target));
             Assert.That(s1.GroupKey, Is.EqualTo("OrderService"));
 
-            var r2 = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var r2 = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
             var s2 = r2.Single(r => PathsEqual(r.RepoPath, target));
             Assert.That(s2.GroupKey, Is.EqualTo("orders"));
 
-            var r3 = await scanner.ScanAsync(layout.Root, groupingSegment: 3, CancellationToken.None);
+            var r3 = scanner.ScanAsync(layout.Root, groupingSegment: 3, CancellationToken.None).ToBlockingEnumerable();
             var s3 = r3.Single(r => PathsEqual(r.RepoPath, target));
             Assert.That(s3.GroupKey, Is.EqualTo("services"));
         }
 
         [Test]
-        public async Task ScanAsync_SortedByGroupKeyThenRepoName_ResultsAreOrdered()
+        public void ScanAsync_SortedByGroupKeyThenRepoName_ResultsAreOrdered()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
 
             var scanner = MakeScanner(new RepositoriesSettings());
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 2, CancellationToken.None).ToBlockingEnumerable();
 
             var projection = repos.Select(r => (r.GroupKey, r.RepoName)).ToList();
             Assert.That(IsSortedByGroupThenName(projection), Is.True, "Repos should be ordered by GroupKey then RepoName (case-insensitive).");
         }
 
         [Test]
-        public async Task ScanAsync_NonRepoContainerFolder_PresentUnderRoot_NotDiscovered()
+        public void ScanAsync_NonRepoContainerFolder_PresentUnderRoot_NotDiscovered()
         {
             using var sandbox = new TestSandbox();
             var layout = sandbox.CreateLargeSystem();
 
             var scanner = MakeScanner(new RepositoriesSettings());
-            var repos = await scanner.ScanAsync(layout.Root, groupingSegment: 1, CancellationToken.None);
+            var repos = scanner.ScanAsync(layout.Root, groupingSegment: 1, CancellationToken.None).ToBlockingEnumerable();
 
             var paths = repos.Select(r => r.RepoPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
             Assert.That(Directory.Exists(layout.NonRepoContainerPath), Is.True);
@@ -176,11 +176,11 @@ namespace RepoDash.Tests
         }
 
         [Test]
-        public async Task ScanAsync_NonExistentRoot_ReturnsEmpty()
+        public void ScanAsync_NonExistentRoot_ReturnsEmpty()
         {
             var nonExisting = Path.Combine(Path.GetTempPath(), "RepoDash_NotThere", Path.GetRandomFileName());
             var scanner = MakeScanner(new RepositoriesSettings());
-            var result = await scanner.ScanAsync(nonExisting, groupingSegment: 1, CancellationToken.None);
+            var result = scanner.ScanAsync(nonExisting, groupingSegment: 1, CancellationToken.None).ToBlockingEnumerable();
             Assert.That(result, Is.Empty);
         }
 

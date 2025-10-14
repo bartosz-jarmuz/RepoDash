@@ -1,4 +1,7 @@
-﻿using RepoDash.Core.Abstractions;
+﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
 
 namespace RepoDash.Infrastructure.Scanning;
@@ -10,59 +13,174 @@ public sealed class FileSystemRepoScanner : IRepoScanner
     public FileSystemRepoScanner(ISettingsStore<RepositoriesSettings> reposSettings)
         => _reposSettings = reposSettings;
 
-    public async Task<IReadOnlyList<RepoInfo>> ScanAsync(string rootPath, int groupingSegment, CancellationToken ct)
+    public async IAsyncEnumerable<RepoInfo> ScanAsync(string rootPath, int groupingSegment, [EnumeratorCancellation] CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
-            return Array.Empty<RepoInfo>();
+            yield break;
 
-        var repos = new List<RepoInfo>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Snapshot settings once
+        var settings = _reposSettings.Current;
+        var excluded = new HashSet<string>(settings.ExcludedPathParts.Select(NormalizePart), StringComparer.OrdinalIgnoreCase);
+        var overrides = settings.CategoryOverrides.ToList();
 
-        var settings = _reposSettings.Current ?? new RepositoriesSettings();
-        var ignored = settings.ExcludedPathParts?
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Select(s => s.Trim())
-            .ToArray() ?? Array.Empty<string>();
-        var overrides = settings.CategoryOverrides?.ToArray() ?? Array.Empty<CategoryOverride>();
-
-        // Discover repos strictly by the presence of a ".git" directory (any depth).
-        foreach (var gitDir in Directory.EnumerateDirectories(rootPath, ".git", SearchOption.AllDirectories))
+        // Work queue of directories to inspect
+        var toVisit = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
         {
-            ct.ThrowIfCancellationRequested();
+            SingleReader = false,
+            SingleWriter = false
+        });
 
-            var repoPath = Directory.GetParent(gitDir)!.FullName;
-            if (!seen.Add(repoPath)) continue;
+        // ensure normalized root is first
+        var root = NormalizePath(rootPath);
+        _ = toVisit.Writer.TryWrite(root);
 
-            // Optional: locate a solution (not required for discovery; used only for overrides/filtering)
-            string? sln = Directory.EnumerateFiles(repoPath, "*.sln", SearchOption.TopDirectoryOnly).FirstOrDefault()
-                       ?? Directory.EnumerateFiles(repoPath, "*.sln", SearchOption.AllDirectories).FirstOrDefault();
+        // pending counter to know when traversal is done
+        var pending = 1;
+        var visited = new ConcurrentDictionary<string, byte?>(StringComparer.OrdinalIgnoreCase);
+        var results = new ConcurrentBag<RepoInfo>();
 
-            // Apply ignored fragments to repo path and (if found) solution path
-            if (ContainsAnyFragment(repoPath, ignored) || ContainsAnyFragment(sln ?? string.Empty, ignored))
-                continue;
+        // degree of parallelism (bounded to avoid hammering disk)
+        var dop = Math.Clamp(Environment.ProcessorCount, 2, 8);
+        var workers = new List<Task>(capacity: dop);
 
-            var name = Path.GetFileName(repoPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            var groupKey = ComputeGroupKey(rootPath, repoPath, groupingSegment);
+        for (var w = 0; w < dop; w++)
+        {
+            workers.Add(Task.Run(async () =>
+            {
+                while (await toVisit.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                {
+                    while (toVisit.Reader.TryRead(out var current))
+                    {
+                        ct.ThrowIfCancellationRequested();
 
-            // Apply category overrides (match on repo path, solution path, or solution file name)
-            groupKey = ApplyCategoryOverrides(groupKey, repoPath, sln, overrides);
+                        var dir = NormalizePath(current);
+                        if (!visited.TryAdd(dir, null)) { DecrementPending(); continue; }
 
-            repos.Add(new RepoInfo(
-                RepoName: name,
-                RepoPath: repoPath,
-                HasGit: true,
-                HasSolution: sln != null,
-                SolutionPath: sln,
-                GroupKey: groupKey));
+                        if (IsExcluded(dir, excluded)) { DecrementPending(); continue; }
+
+                        // If it contains a .git folder, it's a repo → collect info
+                        string? gitDir = null;
+                        try
+                        {
+                            gitDir = Directory.EnumerateDirectories(dir, ".git", SearchOption.TopDirectoryOnly).FirstOrDefault();
+                        }
+                        catch
+                        {
+                        }
+
+                        if (gitDir != null)
+                        {
+                            var sln = TryFindSolution(dir);
+                            var name = Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+                            var group = ComputeGroupKey(rootPath, dir, groupingSegment);
+                            group = ApplyCategoryOverrides(group, dir, sln, overrides);
+
+                            results.Add(new RepoInfo(
+                                RepoName: name,
+                                RepoPath: dir,
+                                HasGit: true,
+                                HasSolution: sln != null,
+                                SolutionPath: sln,
+                                GroupKey: group));
+
+                            DecrementPending();
+                            continue;
+                        }
+
+                        // Not a repo → enqueue subdirectories
+                        IEnumerable<string> subs = Array.Empty<string>();
+                        try
+                        {
+                            subs = Directory.EnumerateDirectories(dir);
+                        }
+                        catch
+                        {
+                        }
+
+                        var any = false;
+                        foreach (var d in subs)
+                        {
+                            any = true;
+                            Interlocked.Increment(ref pending);
+                            _ = toVisit.Writer.TryWrite(d);
+                        }
+
+                        DecrementPending();
+                    }
+                }
+            }, ct));
         }
 
-        return await Task.FromResult<IReadOnlyList<RepoInfo>>(
-            repos.OrderBy(r => r.GroupKey, StringComparer.OrdinalIgnoreCase)
-                 .ThenBy(r => r.RepoName, StringComparer.OrdinalIgnoreCase)
-                 .ToList());
+        // Watcher to complete the channel when pending hits 0
+        void DecrementPending()
+        {
+            if (Interlocked.Decrement(ref pending) == 0)
+            {
+                toVisit.Writer.TryComplete();
+            }
+        }
+
+        try
+        {
+            await Task.WhenAll(workers).ConfigureAwait(false);
+        }
+        catch
+        {
+            // best-effort traversal; ensure channel completes
+            toVisit.Writer.TryComplete();
+            throw;
+        }
+
+        // Final ORDER: GroupKey, then RepoName (case-insensitive) – matches unit test expectations.
+        foreach (var item in results
+            .OrderBy(r => r.GroupKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => r.RepoName, StringComparer.OrdinalIgnoreCase))
+        {
+            ct.ThrowIfCancellationRequested();
+            yield return item;
+            await Task.Yield(); // keep UI responsive while enumerating sorted results
+        }
     }
 
-    private static string ComputeGroupKey(string root, string repoPath, int groupingSegment)
+    static string NormalizePath(string path) =>
+        Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+    static string NormalizePart(string s) => (s ?? string.Empty).Trim();
+
+    static bool IsExcluded(string path, HashSet<string> excludedParts)
+    {
+        if (excludedParts.Count == 0) return false;
+        foreach (var part in excludedParts)
+        {
+            if (string.IsNullOrWhiteSpace(part)) continue;
+            if (path.IndexOf(part, StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+        }
+        return false;
+    }
+
+    static string? TryFindSolution(string repoPath)
+    {
+        try
+        {
+            var top = Directory.EnumerateFiles(repoPath, "*.sln", SearchOption.TopDirectoryOnly).FirstOrDefault();
+            if (top != null) return top;
+
+            var srcDir = Path.Combine(repoPath, "src");
+            if (Directory.Exists(srcDir))
+            {
+                var nested = Directory.EnumerateFiles(srcDir, "*.sln", SearchOption.AllDirectories).FirstOrDefault();
+                if (nested != null) return nested;
+            }
+        }
+        catch
+        {
+        }
+        return null;
+    }
+
+    static string ComputeGroupKey(string root, string repoPath, int groupingSegment)
     {
         var relative = Path.GetRelativePath(root, repoPath);
         var parts = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
@@ -79,23 +197,12 @@ public sealed class FileSystemRepoScanner : IRepoScanner
         return parts.Length > 1 ? parts[^2] : parts[0];
     }
 
-    private static bool ContainsAnyFragment(string haystack, IEnumerable<string> fragments)
+    static string ApplyCategoryOverrides(string currentGroupKey, string repoPath, string? solutionPath, List<CategoryOverride> rules)
     {
-        if (string.IsNullOrEmpty(haystack)) return false;
-        foreach (var raw in fragments)
-        {
-            var f = raw?.Trim();
-            if (string.IsNullOrEmpty(f)) continue;
-            if (haystack.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-        }
-        return false;
-    }
+        if (rules.Count == 0) return currentGroupKey;
 
-    private static string ApplyCategoryOverrides(string currentGroupKey, string repoPath, string? solutionPath, IEnumerable<CategoryOverride> rules)
-    {
-        if (rules == null) return currentGroupKey;
-        var solName = string.IsNullOrEmpty(solutionPath) ? string.Empty : Path.GetFileName(solutionPath);
+        var solName = solutionPath is null ? string.Empty : Path.GetFileNameWithoutExtension(solutionPath);
+
         foreach (var rule in rules)
         {
             var target = rule.Category?.Trim();
@@ -109,5 +216,17 @@ public sealed class FileSystemRepoScanner : IRepoScanner
             }
         }
         return currentGroupKey;
+    }
+
+    static bool ContainsAnyFragment(string haystack, IEnumerable<string> fragments)
+    {
+        foreach (var f in fragments)
+        {
+            var frag = f?.Trim();
+            if (string.IsNullOrWhiteSpace(frag)) continue;
+            if (haystack.IndexOf(frag, StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+        }
+        return false;
     }
 }
