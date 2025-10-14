@@ -31,6 +31,7 @@ public partial class App : Application
         var sc = new ServiceCollection();
 
         sc.AddSingleton<IGitService, LibGit2SharpGitService>();
+        sc.AddSingleton<IBranchProvider, LightweightBranchProvider>();
         sc.AddSingleton<IColorizer, NullColorizer>();
         sc.AddSingleton<IRemoteLinkProvider, GitRemoteLinkProvider>();
         sc.AddSingleton<ILauncher, Launcher>();

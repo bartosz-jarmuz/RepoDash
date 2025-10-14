@@ -47,7 +47,7 @@
         <TextBlock Text="*" Foreground="Red" FontWeight="Black"
                    Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"
                    FontSize="10" Margin="0" Padding="0"/>
-        <Run Text="{Binding Branch}"/>
+        <Run Text="{Binding CurrentBranch}"/>
       </TextBlock>
     </StackPanel>
 

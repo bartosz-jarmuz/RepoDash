@@ -12,6 +12,7 @@ public class MainViewModel : ObservableObject
     private readonly IRepoScanner _scanner;
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
+    private readonly IBranchProvider _branchProvider;
     private readonly IRemoteLinkProvider _links;
 
     public SearchBarViewModel SearchBar { get; }
@@ -25,6 +26,7 @@ public class MainViewModel : ObservableObject
         IRepoScanner scanner,
         ILauncher launcher,
         IGitService git,
+        IBranchProvider branchProvider,
         IRemoteLinkProvider links,
         SettingsMenuViewModel settingsMenuVm)
     {
@@ -32,6 +34,7 @@ public class MainViewModel : ObservableObject
         _scanner = scanner;
         _launcher = launcher;
         _git = git;
+        _branchProvider = branchProvider;
         _links = links;
 
         // Child VMs
@@ -104,7 +107,7 @@ public class MainViewModel : ObservableObject
                 g => g.OrderBy(x => x.RepoName, StringComparer.OrdinalIgnoreCase)
                       .Select(r =>
                       {
-                          var vm = new RepoItemViewModel(_launcher, _git, _links)
+                          var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider)
                           {
                               Name = r.RepoName,
                               Path = r.RepoPath,
