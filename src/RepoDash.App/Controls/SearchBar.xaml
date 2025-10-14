@@ -14,7 +14,8 @@
       <ColumnDefinition Width="Auto"/>
     </Grid.ColumnDefinitions>
 
-    <xctk:WatermarkTextBox Watermark="Press Ctrl+F to filter repos (Esc to clear)" KeepWatermarkOnGotFocus="True" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+    <xctk:WatermarkTextBox x:Name="FilterTextBox" 
+                           Watermark="Press Ctrl+F to filter repos (Esc to clear)" KeepWatermarkOnGotFocus="True" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                            VerticalAlignment="Center" Height="36" Padding="8"
                            behaviors:FocusOnRequest.IsRequested="{Binding DataContext.FocusSearchRequested, RelativeSource={RelativeSource AncestorType=Window}}"
                            ToolTip="Type to filter repositories. Esc clears.">

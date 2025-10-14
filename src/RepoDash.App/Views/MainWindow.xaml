@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:RepoDash.App.Controls"
         xmlns:behaviors="clr-namespace:RepoDash.App.Behaviors"
+        xmlns:cmds="clr-namespace:RepoDash.App.Commands"
         Title="{Binding WindowTitle}"
         Width="1200"
         Height="800"
@@ -13,6 +14,13 @@
         behaviors:TrayBehavior.ShowCommand="{Binding FocusSearchCommand}"
         behaviors:WindowRestoreFocusBehavior.Command="{Binding FocusSearchCommand}"
         >
+  <Window.InputBindings>
+    <KeyBinding
+      Modifiers="Control"
+      Key="F"
+      Command="{x:Static cmds:FocusElementCommand.Instance}"
+      CommandParameter="FilterTextBox" />
+  </Window.InputBindings>
   <DockPanel>
     <!-- Top bar as a single control; it composes child controls -->
     <controls:TopBar DockPanel.Dock="Top" DataContext="{Binding}" Margin="10"/>
