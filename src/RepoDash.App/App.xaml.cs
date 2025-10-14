@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.Abstractions;
 using RepoDash.App.Services;
+using RepoDash.App.ViewModels.Settings;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.NullObjects;
 using RepoDash.Core.Settings;
@@ -12,7 +13,7 @@ using RepoDash.Persistence.FileStores;
 using RepoDash.Persistence.Paths;
 using System.IO;
 using System.Windows;
-using RepoDash.App.ViewModels.Settings;
+using RepoDash.App.Windowing;
 using Application = System.Windows.Application;
 
 namespace RepoDash.App;
@@ -54,8 +55,24 @@ public partial class App : Application
 
         // window service
         sc.AddSingleton<ISettingsWindowService, SettingsWindowService>();
+        sc.AddSingleton<IWindowPlacementCache, JsonWindowPlacementCache>();
 
 
         Services = sc.BuildServiceProvider();
+
+        Resources["RepoDash_WindowCache"] = Services.GetRequiredService<IWindowPlacementCache>();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        try
+        {
+            // Persist General settings once on exit (top-bar changes etc.)
+            var generalStore = Services.GetRequiredService<ISettingsStore<GeneralSettings>>();
+            generalStore.UpdateAsync().GetAwaiter().GetResult();
+        }
+        catch { /* best-effort */ }
+
+        base.OnExit(e);
     }
 }

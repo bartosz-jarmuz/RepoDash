@@ -2,9 +2,16 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:RepoDash.App.Controls"
-        xmlns:converters="clr-namespace:RepoDash.App.Converters"
-        xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
-        Title="RepoDash" Width="1200" Height="800"
+        xmlns:behaviors="clr-namespace:RepoDash.App.Behaviors"
+        Title="{Binding WindowTitle}"
+        Width="1200"
+        Height="800"
+        behaviors:WindowPlacementBehavior.Cache="{StaticResource WindowPlacementCache}"
+        behaviors:GlobalHotkeyBehavior.Hotkey="{Binding Settings.GlobalHotkey}"
+        behaviors:GlobalHotkeyBehavior.Command="{Binding FocusSearchCommand}"
+        behaviors:TrayBehavior.Enabled="{Binding Settings.CloseToTray}"
+        behaviors:TrayBehavior.ShowCommand="{Binding FocusSearchCommand}"
+        behaviors:WindowRestoreFocusBehavior.Command="{Binding FocusSearchCommand}"
         >
   <DockPanel>
     <!-- Top bar as a single control; it composes child controls -->

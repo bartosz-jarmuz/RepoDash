@@ -1,14 +1,17 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using RepoDash.Core.Abstractions;
-using System.IO;
+using CommunityToolkit.Mvvm.Input;
 using RepoDash.App.Abstractions;
+using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
+using System.IO;
+using System.Windows.Threading;
 
 namespace RepoDash.App.ViewModels;
 
-public class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject
 {
     private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
+    private readonly ISettingsStore<GeneralSettings> _generalStore;
     private readonly IRepoScanner _scanner;
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
@@ -21,8 +24,26 @@ public class MainViewModel : ObservableObject
     public RepoGroupsViewModel RepoGroups { get; }
     public GlobalGitOperationsMenuViewModel GlobalGitOperations { get; }
 
+    [ObservableProperty]
+    private bool _focusSearchRequested;
+
+    [RelayCommand]
+    private void ApplyUiSettings()
+    {
+        Settings.ListItemVisibleCount = Math.Max(1, Settings.ListItemVisibleCount);
+        Settings.GroupPanelWidth = Math.Max(1, Settings.GroupPanelWidth);
+        Settings.GroupingSegment = Math.Max(1, Settings.GroupingSegment);
+    }
+
+    [RelayCommand]
+    private void FocusSearch()
+    {
+        RequestFocusSearch();
+    }
+
     public MainViewModel(
         IReadOnlySettingsSource<GeneralSettings> generalSettings,
+        ISettingsStore<GeneralSettings> generalStore,
         IRepoScanner scanner,
         ILauncher launcher,
         IGitService git,
@@ -31,6 +52,7 @@ public class MainViewModel : ObservableObject
         SettingsMenuViewModel settingsMenuVm)
     {
         _generalSettings = generalSettings;
+        _generalStore = generalStore;
         _scanner = scanner;
         _launcher = launcher;
         _git = git;
@@ -83,6 +105,21 @@ public class MainViewModel : ObservableObject
                 await r.RefreshStatusAsync(CancellationToken.None);
             }
         };
+
+        _generalSettings.PropertyChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(Settings));
+            OnPropertyChanged(nameof(WindowTitle));
+        };
+    }
+
+    public string WindowTitle
+    {
+        get
+        {
+            var path = Settings.RepoRoot;
+            return string.IsNullOrWhiteSpace(path) ? "RepoDash" : $"RepoDash - {path}";
+        }
     }
 
     public GeneralSettings Settings => _generalSettings.Current;
@@ -122,5 +159,14 @@ public class MainViewModel : ObservableObject
         RepoGroups.Load(itemsByGroup);
         // apply current filter
         RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+
+        OnPropertyChanged(nameof(Settings));
+        OnPropertyChanged(nameof(WindowTitle));
+    }
+
+    public void RequestFocusSearch()
+    {
+        FocusSearchRequested = true;
+        App.Current?.Dispatcher.InvokeAsync(() => FocusSearchRequested = false, DispatcherPriority.ApplicationIdle);
     }
 }

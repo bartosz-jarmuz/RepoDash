@@ -3,7 +3,7 @@
 public sealed class GeneralSettings
 {
     public string GlobalHotkey { get; set; } = "Ctrl+Alt+Space";
-    public bool MinimizeToTray { get; set; } = true;
+    public bool CloseToTray { get; set; } = true;
     public int ListItemVisibleCount { get; set; } = 10;
     public int GroupPanelWidth { get; set; } = 360;
     public int GroupingSegment { get; set; } = 2;
@@ -16,4 +16,5 @@ public sealed class GeneralSettings
     public string? GitUiPath { get; set; }
     public bool ShowRecent { get; set; } = true;
     public bool ShowFrequent { get; set; } = true;
+    public WindowPlacement? LastWindowPlacement { get; set; }
 }

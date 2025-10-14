@@ -5,38 +5,39 @@
              xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance vm:RepoRootViewModel}"
-             >
+             d:DataContext="{d:DesignInstance vm:RepoRootViewModel}">
   <Grid Margin="0,0,8,0">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition/>
+      <ColumnDefinition />
       <!-- TextBox -->
-      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="Auto" />
       <!-- Browse -->
-      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="Auto" />
       <!-- Refresh -->
     </Grid.ColumnDefinitions>
 
-    <TextBox Text="{Binding RepoRootInput, UpdateSourceTrigger=PropertyChanged}"
-             VerticalAlignment="Center" Height="36" Padding="8"
-             ToolTip="Change path and press Enter, click Browse, or Refresh">
-      <TextBox.InputBindings>
-        <KeyBinding Key="Enter" Command="{Binding LoadCommand}" />
-      </TextBox.InputBindings>
-    </TextBox>
-
+    <DockPanel LastChildFill="True">
+      <TextBlock Text="Repo root:" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="2" />
+      <TextBox Text="{Binding RepoRootInput, UpdateSourceTrigger=PropertyChanged}"
+               VerticalAlignment="Center" Height="36" Padding="8"
+               ToolTip="Change path and press Enter, click Browse, or Refresh">
+        <TextBox.InputBindings>
+          <KeyBinding Key="Enter" Command="{Binding LoadCommand}" />
+        </TextBox.InputBindings>
+      </TextBox>
+    </DockPanel>
     <Button Grid.Column="1"
             Command="{Binding BrowseCommand}"
             Style="{StaticResource IconFlatButton}"
             ToolTip="Browse for repo root">
-      <TextBlock Text="📁" FontSize="14"/>
+      <TextBlock Text="📁" FontSize="14" Margin="5,0" />
     </Button>
 
     <Button Grid.Column="2"
             Command="{Binding LoadCommand}"
             Style="{StaticResource IconFlatButton}"
-            ToolTip="Refresh (reload current root)">
-      <TextBlock Text="↻" FontSize="14"/>
+            ToolTip="Refresh (reload current root)" Margin="5,0">
+      <TextBlock Text="↻" FontSize="22" FontWeight="Black" />
     </Button>
   </Grid>
 </UserControl>

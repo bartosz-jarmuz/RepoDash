@@ -4,6 +4,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:behaviors="clr-namespace:RepoDash.App.Behaviors"
+             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:SearchBarViewModel}">
   <Grid Margin="0,0,8,0">
@@ -12,9 +14,16 @@
       <ColumnDefinition Width="Auto"/>
     </Grid.ColumnDefinitions>
 
-    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-             VerticalAlignment="Center" Height="36" Padding="8"
-             ToolTip="Type to filter by path. Esc clears."/>
+    <xctk:WatermarkTextBox Watermark="Press Ctrl+F to filter repos (Esc to clear)" KeepWatermarkOnGotFocus="True" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                           VerticalAlignment="Center" Height="36" Padding="8"
+                           behaviors:FocusOnRequest.IsRequested="{Binding DataContext.FocusSearchRequested, RelativeSource={RelativeSource AncestorType=Window}}"
+                           ToolTip="Type to filter repositories. Esc clears.">
+      <xctk:WatermarkTextBox.InputBindings>
+        <KeyBinding
+          Key="Escape"
+          Command="{Binding ClearCommand}"/>
+      </xctk:WatermarkTextBox.InputBindings>
+    </xctk:WatermarkTextBox>
 
     <Button Grid.Column="1" Command="{Binding ClearCommand}"
             Style="{StaticResource IconFlatButton}" ToolTip="Clear search">

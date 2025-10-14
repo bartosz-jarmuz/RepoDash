@@ -12,6 +12,7 @@ public partial class RepoGroupsViewModel : ObservableObject
     public RepoGroupsViewModel(IReadOnlySettingsSource<GeneralSettings> settings)
     {
         _settings = settings;
+        _settings.PropertyChanged += (_, __) => OnPropertyChanged(nameof(Settings));
     }
 
     public GeneralSettings Settings => _settings.Current;

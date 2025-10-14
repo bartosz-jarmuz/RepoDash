@@ -5,6 +5,7 @@
              xmlns:controls="clr-namespace:RepoDash.App.Controls"
              xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
   <Grid>
@@ -20,35 +21,35 @@
 
     <!-- Search (its own VM) -->
     <controls:SearchBar Grid.Column="0" Margin="0,0,8,0"
-                        DataContext="{Binding SearchBar}"/>
+                        DataContext="{Binding SearchBar}" />
 
     <!-- List height -->
     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-      <TextBlock Text="List Height:" Margin="0,0,6,0" VerticalAlignment="Center"/>
-      <TextBox Text="{Binding Settings.ListItemVisibleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="60" Height="36"/>
+      <TextBlock Text="List Height:" Margin="0,0,6,0" VerticalAlignment="Center" />
+      <xctk:IntegerUpDown
+        Value="{Binding Settings.ListItemVisibleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=1,
+                  ValidatesOnExceptions=False}" Width="60"
+        Height="36" Minimum="1" Maximum="300" ClipValueToMinMax="True"
+        AllowTextInput="True" />
     </StackPanel>
 
     <!-- Panel width -->
     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-      <TextBlock Text="Panel Width:" Margin="0,0,6,0" VerticalAlignment="Center"/>
-      <TextBox Text="{Binding Settings.GroupPanelWidth,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="80" Height="36"/>
-    </StackPanel>
-
-    <!-- Group segment -->
-    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-      <TextBlock Text="Group Segment:" Margin="0,0,6,0" VerticalAlignment="Center"/>
-      <TextBox Text="{Binding Settings.GroupingSegment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="60" Height="36"
-               ToolTip="Which relative path segment (from the end) defines the group"/>
+      <TextBlock Text="Panel Width:" Margin="0,0,6,0" VerticalAlignment="Center" />
+      <xctk:IntegerUpDown Value="{Binding Settings.GroupPanelWidth,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=10,
+                  ValidatesOnExceptions=False}"
+                          Width="80" Height="36" Minimum="10" Maximum="900" ClipValueToMinMax="True"
+                          AllowTextInput="True"/>
     </StackPanel>
 
     <controls:RepoRoot Grid.Column="4" Margin="0,0,8,0"
-                       DataContext="{Binding RepoRoot}"/>
+                       DataContext="{Binding RepoRoot}" />
 
     <controls:GlobalGitOperationsMenu Grid.Column="5" VerticalAlignment="Center"
-                           DataContext="{Binding GlobalGitOperations}"/>
+                                      DataContext="{Binding GlobalGitOperations}" />
 
     <!-- Settings / Git menu (its own VM) -->
     <controls:SettingsMenu Grid.Column="6" VerticalAlignment="Center"
-                           DataContext="{Binding SettingsMenu}"/>
+                           DataContext="{Binding SettingsMenu}" />
   </Grid>
 </UserControl>

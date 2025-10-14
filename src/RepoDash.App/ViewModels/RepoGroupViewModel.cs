@@ -10,6 +10,7 @@ public partial class RepoGroupViewModel : ObservableObject
     public RepoGroupViewModel(IReadOnlySettingsSource<GeneralSettings> settings)
     {
         _settings = settings;
+        _settings.PropertyChanged += (_, __) => OnPropertyChanged(nameof(Settings));
     }
 
     [ObservableProperty] private string _groupKey = string.Empty;
