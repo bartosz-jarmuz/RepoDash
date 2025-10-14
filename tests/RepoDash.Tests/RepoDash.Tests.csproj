@@ -6,11 +6,13 @@
     <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="NUnit" Version="4.1.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\RepoDash.Core\RepoDash.Core.csproj" />
+    <ProjectReference Include="..\..\src\RepoDash.Infrastructure\RepoDash.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
