@@ -2,5 +2,7 @@
   <PropertyGroup>
     <RootNamespace>RepoDash.Core</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
 </Project>

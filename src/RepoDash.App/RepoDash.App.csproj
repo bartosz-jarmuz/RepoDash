@@ -6,6 +6,8 @@
     <RootNamespace>RepoDash.App</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Resources\RepoDash.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="Resources\RepoDash.ico" />

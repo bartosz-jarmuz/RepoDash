@@ -2,5 +2,5 @@ namespace RepoDash.Core.Settings;
 
 public sealed class ShortcutsSettings
 {
-    List<ShortcutEntry> ShortcutEntries { get; set; }
+    List<ShortcutEntry> ShortcutEntries { get; set; } = new();
 }
