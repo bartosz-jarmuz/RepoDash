@@ -1,4 +1,4 @@
-namespace RepoDash.Tests;
+namespace RepoDash.Tests.TestingUtilities;
 
 internal static class AsyncEnumerableExtensions
 {
