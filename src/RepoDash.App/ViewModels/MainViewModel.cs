@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IBranchProvider _branchProvider;
     private readonly IRemoteLinkProvider _links;
     private readonly RepoCacheService _cacheService;
+    private CancellationTokenSource? _statusWarmupCts;
 
     [ObservableProperty] private bool _focusSearchRequested;
 
@@ -126,34 +127,95 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             return;
 
-        // Keep your persistence semantics
+        // keep existing persistence semantics
         _generalSettings.Current.RepoRoot = root;
 
         _refreshCts?.Cancel();
         _refreshCts = new CancellationTokenSource();
         var ct = _refreshCts.Token;
 
-        // 1) paint from cache immediately
-        var cached = await _cacheService.LoadFromCacheAsync(root, ct);
-        ApplySnapshot(cached);
-
-        // 2) background refresh with streaming upserts
-        _ = Task.Run(async () =>
+        try
         {
-            try
+            // 1) Fast initial paint from cache
+            var cached = await _cacheService.LoadFromCacheAsync(root, ct).ConfigureAwait(false);
+            Dispatch(() => ApplySnapshot(cached));
+
+            // Warm-up heavy git status in deterministic (alphabetical) order with limited parallelism
+            _ = Task.Run(async () =>
             {
-                await _cacheService.RefreshAsync(
-                    root,
-                    groupingSegment: _generalSettings.Current.GroupingSegment,
-                    upsert: repo => Dispatch(() => Upsert(repo)),
-                    removeByRepoPath: repoPath => Dispatch(() => RepoGroups.RemoveByRepoPath(repoPath)),
-                    ct);
-            }
-            catch
+                var items = RepoGroups
+                    .GetAllRepoItems()
+                    .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (items.Count == 0) return;
+
+                var gate = new System.Threading.SemaphoreSlim(4);
+                var tasks = items.Select(async vm =>
+                {
+                    await gate.WaitAsync(ct).ConfigureAwait(false);
+                    try
+                    {
+                        if (!ct.IsCancellationRequested)
+                            await vm.RefreshStatusAsync(ct).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // best-effort per item
+                    }
+                    finally
+                    {
+                        try { gate.Release(); } catch { }
+                    }
+                }).ToList();
+
+                try { await Task.WhenAll(tasks).ConfigureAwait(false); } catch { }
+            }, ct);
+
+            // 2) Full refresh streaming into the UI
+            await _cacheService.RefreshAsync(
+                root,
+                groupingSegment: _generalSettings.Current.GroupingSegment,
+                upsert: r => Dispatch(() => Upsert(r)),
+                removeByRepoPath: p => Dispatch(() => RepoGroups.RemoveByRepoPath(p)),
+                ct).ConfigureAwait(false);
+
+            // Run a second warm-up pass after the list settles (same deterministic order)
+            _ = Task.Run(async () =>
             {
-                // best effort
-            }
-        }, ct);
+                var items = RepoGroups
+                    .GetAllRepoItems()
+                    .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (items.Count == 0) return;
+
+                var gate = new System.Threading.SemaphoreSlim(4);
+                var tasks = items.Select(async vm =>
+                {
+                    await gate.WaitAsync(ct).ConfigureAwait(false);
+                    try
+                    {
+                        if (!ct.IsCancellationRequested)
+                            await vm.RefreshStatusAsync(ct).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // best-effort per item
+                    }
+                    finally
+                    {
+                        try { gate.Release(); } catch { }
+                    }
+                }).ToList();
+
+                try { await Task.WhenAll(tasks).ConfigureAwait(false); } catch { }
+            }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // expected on root change / shutdown
+        }
 
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(WindowTitle));
@@ -181,6 +243,7 @@ public partial class MainViewModel : ObservableObject
     {
         var vm = MakeRepoItemVm(r);
         RepoGroups.Upsert(r.GroupKey, vm);
+        _ = Task.Run(() => vm.RefreshStatusAsync(CancellationToken.None));
     }
 
     private RepoItemViewModel MakeRepoItemVm(CachedRepo r)

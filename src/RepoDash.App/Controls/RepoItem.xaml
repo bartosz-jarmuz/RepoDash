@@ -50,9 +50,7 @@
         <Run Text="{Binding CurrentBranch}"/>
       </TextBlock>
     </StackPanel>
-
-    <!-- Right: flat icon buttons -->
-    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+    <UniformGrid Grid.Column="1" HorizontalAlignment="Right"  Rows="2">
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding LaunchCommand}" ToolTip="Launch" Margin="0,0,4,0">
         <TextBlock Text="▶"/>
       </Button>
@@ -74,7 +72,8 @@
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding CopyPathCommand}" ToolTip="Copy path" Margin="0,0,4,0">
         <TextBlock Text="📋"/>
       </Button>
-    </StackPanel>
+    </UniformGrid>
+
 
     <!-- Context menu -->
     <Grid.ContextMenu>
