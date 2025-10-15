@@ -13,6 +13,7 @@ public sealed class RepoCacheServiceTests
     [Test]
     public async Task LoadFromCache_ReturnsSnapshot_WithoutInvokingScanner()
     {
+        var path = @"C:\dev";
         var store = new InMemoryCacheStore();
         var scanner = new Mock<IRepoScanner>(MockBehavior.Strict); // must not be called
         var branches = new Mock<IBranchProvider>(MockBehavior.Loose);
@@ -21,7 +22,7 @@ public sealed class RepoCacheServiceTests
 
         var cached = new RepoRootCache
         {
-            NormalizedRoot = "C_dev",
+            NormalizedRoot = RepoCacheService.NormalizePathString(path),
             CachedAtUtc = DateTimeOffset.UtcNow,
             Repos = new()
             {
@@ -38,9 +39,9 @@ public sealed class RepoCacheServiceTests
                 }
             }
         };
-        await store.WriteAsync("C_dev", cached, CancellationToken.None);
+        await store.WriteAsync(RepoCacheService.NormalizePathString(path), cached, CancellationToken.None);
 
-        var snapshot = await svc.LoadFromCacheAsync(@"C:\dev", CancellationToken.None);
+        var snapshot = await svc.LoadFromCacheAsync(path, CancellationToken.None);
 
         Assert.That(snapshot.Count, Is.EqualTo(1));
         Assert.That(snapshot[0].RepoName, Is.EqualTo("A"));
@@ -162,7 +163,7 @@ public sealed class RepoCacheServiceTests
         using var cts = new CancellationTokenSource();
         var task = svc.RefreshAsync(layout.Root, 2, _ => { cts.Cancel(); }, _ => { }, cts.Token);
 
-        Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
+        Assert.ThrowsAsync<OperationCanceledException>(async () => await task);
     }
 
     // ————— helpers —————

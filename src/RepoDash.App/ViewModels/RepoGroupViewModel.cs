@@ -32,18 +32,33 @@ public partial class RepoGroupViewModel : ObservableObject
 
     public void ApplyFilter(string term)
     {
-        Items.Clear();
-        IEnumerable<RepoItemViewModel> query = _allItems;
+        // Build into a local list to avoid many UI notifications,
+        // then swap the Items collection once.
+        var result = new List<RepoItemViewModel>(_allItems.Count);
 
-        if (!string.IsNullOrWhiteSpace(term))
+        if (string.IsNullOrWhiteSpace(term))
         {
-            query = _allItems.Where(r =>
-                r.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                r.Path.Contains(term, StringComparison.OrdinalIgnoreCase));
+            // No filter: include all
+            result.AddRange(_allItems);
+        }
+        else
+        {
+            // Filter without LINQ to minimize allocations and delegate overhead
+            foreach (var r in _allItems)
+            {
+                if (r.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    r.Path.Contains(term, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Add(r);
+                }
+            }
         }
 
-        foreach (var r in query.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
-            Items.Add(r);
+        // Sort once using the same ordering you had
+        result.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name));
+
+        // Single reset notification instead of N adds
+        Items = new ObservableCollection<RepoItemViewModel>(result);
     }
 
     public void Upsert(RepoItemViewModel item)

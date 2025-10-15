@@ -17,7 +17,7 @@ public sealed class RepoCacheService
 
     public async Task<IReadOnlyList<CachedRepo>> LoadFromCacheAsync(string rootPath, CancellationToken ct)
     {
-        var key = NormalizeRoot(rootPath);
+        var key = NormalizePathString(rootPath);
         var cache = await _store.ReadAsync(key, ct);
         return cache?.Repos ?? [];
     }
@@ -29,7 +29,7 @@ public sealed class RepoCacheService
         Action<string> removeByRepoPath,
         CancellationToken ct)
     {
-        var key = NormalizeRoot(rootPath);
+        var key = NormalizePathString(rootPath);
         var cache = await _store.ReadAsync(key, ct) ?? new RepoRootCache
         {
             NormalizedRoot = key,
@@ -38,7 +38,7 @@ public sealed class RepoCacheService
         };
 
         var currentByPath = new ConcurrentDictionary<string, CachedRepo>(
-            cache.Repos.Select(r => new KeyValuePair<string, CachedRepo>(NormalizePath(r.RepoPath), r)));
+            cache.Repos.Select(r => new KeyValuePair<string, CachedRepo>(TrimPath(r.RepoPath), r)));
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -46,7 +46,7 @@ public sealed class RepoCacheService
         {
             ct.ThrowIfCancellationRequested();
 
-            var p = NormalizePath(info.RepoPath);
+            var p = TrimPath(info.RepoPath);
             seen.Add(p);
 
             var signature = RepoSignatureCalculator.Compute(info.RepoPath, info.SolutionPath);
@@ -89,7 +89,7 @@ public sealed class RepoCacheService
         await _store.WriteAsync(key, cache, ct);
     }
 
-    static string NormalizeRoot(string path)
+    public static string NormalizePathString(string path)
     {
         var full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         // Make a filesystem-friendly key
@@ -97,6 +97,6 @@ public sealed class RepoCacheService
         return key;
     }
 
-    static string NormalizePath(string path) =>
+    static string TrimPath(string path) =>
         Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 }

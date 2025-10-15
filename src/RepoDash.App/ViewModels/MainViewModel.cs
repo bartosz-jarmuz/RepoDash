@@ -59,7 +59,10 @@ public partial class MainViewModel : ObservableObject
         RepoRoot.RepoRootInput = _generalSettings.Current.RepoRoot;
 
         // Wiring
-        SearchBar.OnFilterChanged = term => RepoGroups.ApplyFilter(term ?? string.Empty);
+        SearchBar.OnFilterChanged = term =>
+            System.Windows.Application.Current?.Dispatcher?.InvokeAsync(
+                () => RepoGroups.ApplyFilter(term ?? string.Empty),
+                DispatcherPriority.Background);
 
         RepoRoot.OnBrowse = () =>
         {
