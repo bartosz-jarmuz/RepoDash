@@ -22,11 +22,20 @@ namespace RepoDash.App;
 
 public partial class App : Application
 {
+    private SingleInstanceService? _singleInstance;
+
     public static IServiceProvider Services { get; private set; } = default!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _singleInstance = new SingleInstanceService("App", ActivateMainWindowSafe);
+        if (!_singleInstance.TryAcquirePrimary())
+        {
+            _singleInstance.SignalActivateExisting();
+            Shutdown();
+            return;
+        }
 
         Directory.CreateDirectory(AppPaths.SettingsDir);
         Directory.CreateDirectory(AppPaths.CacheDir);
@@ -71,6 +80,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _singleInstance?.Dispose();
         try
         {
             // Persist General settings once on exit (top-bar changes etc.)
@@ -81,4 +91,27 @@ public partial class App : Application
 
         base.OnExit(e);
     }
+
+    private static void ActivateMainWindowSafe()
+    {
+        var w = Current?.MainWindow;
+        if (w == null) return;
+
+        if (!w.IsVisible) w.Show();
+        if (w.WindowState == WindowState.Minimized) w.WindowState = WindowState.Normal;
+        w.Activate();
+
+        try
+        {
+            var dc = w.DataContext;
+            var prop = dc?.GetType().GetProperty("FocusSearchCommand");
+            var cmd = prop?.GetValue(dc) as System.Windows.Input.ICommand;
+            if (cmd?.CanExecute(null) == true) cmd.Execute(null);
+        }
+        catch
+        {
+            // best-effort: window is already visible/active even if command not present
+        }
+    }
+
 }
