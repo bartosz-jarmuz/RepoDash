@@ -59,14 +59,14 @@
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding BrowseCommand}" ToolTip="Browse" Margin="0,0,4,0">
         <TextBlock Text="📁"/>
       </Button>
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenRemoteAsyncCommand}" ToolTip="Open remote" Margin="0,0,4,0">
+      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenRemoteCommand}" ToolTip="Open remote" Margin="0,0,4,0">
         <TextBlock Text="🌐"/>
       </Button>
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenPipelinesAsyncCommand}" ToolTip="Pipelines" Margin="0,0,4,0">
-        <TextBlock Text="⛓"/>
+      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenPipelinesCommand}" ToolTip="Pipelines" Margin="0,0,4,0">
+        <TextBlock Text="🛳️"/>
       </Button>
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitUiCommand}" ToolTip="Git UI" Margin="0,0,4,0">
-        <TextBlock Text="⚙"/>
+        <TextBlock Text="⌨️"/>
       </Button>
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding CopyNameCommand}" ToolTip="Copy name" Margin="0,0,4,0">
         <TextBlock Text="⎘"/>
@@ -78,12 +78,12 @@
 
     <!-- Context menu -->
     <Grid.ContextMenu>
-      <ContextMenu>
+      <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
         <MenuItem Header="Launch" Command="{Binding LaunchCommand}"/>
         <MenuItem Header="Browse" Command="{Binding BrowseCommand}"/>
         <Separator/>
-        <MenuItem Header="Open Remote" Command="{Binding OpenRemoteAsyncCommand}"/>
-        <MenuItem Header="Open Pipelines" Command="{Binding OpenPipelinesAsyncCommand}"/>
+        <MenuItem Header="Open Remote" Command="{Binding OpenRemoteCommand}"/>
+        <MenuItem Header="Open Pipelines" Command="{Binding OpenPipelinesCommand}"/>
         <MenuItem Header="Git UI" Command="{Binding OpenGitUiCommand}"/>
         <Separator/>
         <MenuItem Header="Copy Name" Command="{Binding CopyNameCommand}"/>

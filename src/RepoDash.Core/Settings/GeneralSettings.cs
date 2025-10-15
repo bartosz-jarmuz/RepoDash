@@ -1,4 +1,6 @@
-﻿namespace RepoDash.Core.Settings;
+﻿using System.ComponentModel;
+
+namespace RepoDash.Core.Settings;
 
 public sealed class GeneralSettings
 {
@@ -16,5 +18,10 @@ public sealed class GeneralSettings
     public string? GitUiPath { get; set; }
     public bool ShowRecent { get; set; } = true;
     public bool ShowFrequent { get; set; } = true;
-    public WindowPlacement? LastWindowPlacement { get; set; }
+
+    [DisplayName("Remote Pipelines Url Part")]
+    [Description(
+        "Relative path appended to a repository page URL to open its pipelines/runs list" +
+        "Use \"/-/pipelines\" for GitLab (default). Use \"/actions\" for GitHub Actions.")]
+    public string RemotePipelinesUrlPart { get; set; } = "/-/pipelines";
 }

@@ -1,9 +1,17 @@
 ﻿using RepoDash.Core.Abstractions;
+using RepoDash.Core.Settings;
 
 namespace RepoDash.Infrastructure.Remote;
 
 public sealed class GitRemoteLinkProvider : IRemoteLinkProvider
 {
+    private readonly ISettingsStore<GeneralSettings> _settings;
+
+    public GitRemoteLinkProvider(ISettingsStore<GeneralSettings> settings)
+    {
+        _settings = settings;
+    }
+
     public bool TryGetProjectLinks(string remoteUrl, out Uri? repoPage, out Uri? pipelinesPage)
     {
         repoPage = null; pipelinesPage = null;
@@ -13,21 +21,14 @@ public sealed class GitRemoteLinkProvider : IRemoteLinkProvider
         var url = Normalize(remoteUrl);
         if (url is null) return false;
 
-        if (url.Host.Contains("gitlab", StringComparison.OrdinalIgnoreCase))
-        {
-            repoPage = url;
-            pipelinesPage = new Uri(url, "/-/pipelines");
-            return true;
-        }
+        // Build pipelines URL using the configurable setting rather than hostname heuristics
+        var part = _settings.Current.RemotePipelinesUrlPart?.Trim();
+        if (string.IsNullOrEmpty(part)) part = "/-/pipelines";
+        if (!part.StartsWith("/")) part = "/" + part;
 
-        if (url.Host.Contains("github", StringComparison.OrdinalIgnoreCase))
-        {
-            repoPage = url;
-            pipelinesPage = new Uri(url, "/actions");
-            return true;
-        }
-
-        return false;
+        repoPage = url;
+        pipelinesPage = new Uri(url + part);
+        return true;
     }
 
     private static Uri? Normalize(string remote)

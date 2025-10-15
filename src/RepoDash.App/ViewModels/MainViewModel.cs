@@ -195,6 +195,8 @@ public partial class MainViewModel : ObservableObject
         };
         // use lightweight branch load first; heavy status can be triggered by user or virtualization
         _ = vm.EnsureBranchLoadedAsync();
+        vm.RequestClearSearch = () => SearchBar.ClearCommand.Execute(null);
+
         return vm;
     }
 

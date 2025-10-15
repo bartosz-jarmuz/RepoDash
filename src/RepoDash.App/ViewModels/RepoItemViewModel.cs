@@ -36,6 +36,8 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     [ObservableProperty] private BranchSyncState _syncState;            // from IGitService (heavy)
     [ObservableProperty] private bool _isDirty;                         // from IGitService (heavy)
 
+    public Action? RequestClearSearch { get; set; }
+
     // Convenience flags for UI bindings
     public bool CanOpenSolution => _hasSolution && !string.IsNullOrWhiteSpace(_solutionPath);
     partial void OnHasSolutionChanged(bool value) => OnPropertyChanged(nameof(CanOpenSolution));
@@ -147,9 +149,17 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void OpenSolution()
+    private void Launch()
     {
-        if (CanOpenSolution) _launcher.OpenSolution(_solutionPath!);
+        if (CanOpenSolution)
+        {
+            _launcher.OpenSolution(_solutionPath!);
+        }
+        else
+        {
+            _launcher.OpenFolder(_path);
+        }
+        RequestClearSearch?.Invoke();
     }
 
     [RelayCommand]
