@@ -124,8 +124,6 @@ namespace RepoDash.Tests
 
             return new MainViewModel(
                 generalSource.Object,
-                generalStore.Object,
-                scanner.Object,
                 launcher.Object,
                 git.Object,
                 branch.Object,

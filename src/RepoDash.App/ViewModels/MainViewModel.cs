@@ -12,14 +12,11 @@ namespace RepoDash.App.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
-    private readonly ISettingsStore<GeneralSettings> _generalStore;
-    private readonly IRepoScanner _scanner; // still injected (used by RepoCacheService)
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
     private readonly IBranchProvider _branchProvider;
     private readonly IRemoteLinkProvider _links;
     private readonly RepoCacheService _cacheService;
-    private CancellationTokenSource? _statusWarmupCts;
 
     [ObservableProperty] private bool _focusSearchRequested;
 
@@ -31,8 +28,6 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         IReadOnlySettingsSource<GeneralSettings> generalSettings,
-        ISettingsStore<GeneralSettings> generalStore,
-        IRepoScanner scanner,
         ILauncher launcher,
         IGitService git,
         IBranchProvider branchProvider,
@@ -41,8 +36,6 @@ public partial class MainViewModel : ObservableObject
         RepoCacheService cacheService)
     {
         _generalSettings = generalSettings;
-        _generalStore = generalStore;
-        _scanner = scanner;
         _launcher = launcher;
         _git = git;
         _branchProvider = branchProvider;

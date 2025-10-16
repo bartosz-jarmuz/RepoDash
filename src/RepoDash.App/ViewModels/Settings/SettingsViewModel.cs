@@ -12,7 +12,6 @@ namespace RepoDash.App.ViewModels.Settings
         public string Title { get; }
         public Action? RequestClose { get; set; }
 
-        public TSettings TypedModel => _store.Current;
         public object Model => _store.Current;
 
         public SettingsViewModel(ISettingsStore<TSettings> store, string title)

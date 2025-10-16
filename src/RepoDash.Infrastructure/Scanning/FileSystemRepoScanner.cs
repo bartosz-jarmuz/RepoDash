@@ -98,10 +98,8 @@ public sealed class FileSystemRepoScanner : IRepoScanner
                         {
                         }
 
-                        var any = false;
                         foreach (var d in subs)
                         {
-                            any = true;
                             Interlocked.Increment(ref pending);
                             _ = toVisit.Writer.TryWrite(d);
                         }

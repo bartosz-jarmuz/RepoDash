@@ -20,25 +20,4 @@ public sealed class WpfUiDispatcher : IUiDispatcher
         if (CheckAccess()) action();
         else _dispatcher.Invoke(action);
     }
-
-    public Task InvokeAsync(Func<Task> actionAsync)
-    {
-        if (actionAsync is null) throw new ArgumentNullException(nameof(actionAsync));
-        if (CheckAccess()) return actionAsync();
-
-        var tcs = new TaskCompletionSource<object?>();
-        _dispatcher.BeginInvoke(new Action(async () =>
-        {
-            try
-            {
-                await actionAsync().ConfigureAwait(false);
-                tcs.SetResult(null);
-            }
-            catch (Exception ex)
-            {
-                tcs.SetException(ex);
-            }
-        }));
-        return tcs.Task;
-    }
 }
