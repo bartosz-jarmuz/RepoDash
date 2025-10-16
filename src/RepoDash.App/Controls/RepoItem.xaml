@@ -91,6 +91,9 @@
         <Separator/>
         <MenuItem Header="Copy Name" Command="{Binding CopyNameCommand}"/>
         <MenuItem Header="Copy Path" Command="{Binding CopyPathCommand}"/>
+        <Separator/>
+        <MenuItem Header="Pin" Command="{Binding TogglePinCommand}" IsCheckable="True" IsChecked="{Binding IsPinned}"/>
+        <MenuItem Header="Blacklist" Command="{Binding ToggleBlacklistCommand}" IsCheckable="True" IsChecked="{Binding IsBlacklisted}"/>
       </ContextMenu>
     </Grid.ContextMenu>
   </Grid>

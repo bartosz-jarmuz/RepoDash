@@ -4,6 +4,7 @@ using RepoDash.App.Abstractions;
 using RepoDash.App.ViewModels;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
+using RepoDash.Core.Usage;
 using RepoDash.Tests.TestingUtilities;
 
 namespace RepoDash.Tests.ViewModels;
@@ -130,8 +131,11 @@ public sealed class RepoGroupsViewModelFilteringTests
         var git = new Mock<IGitService>().Object;
         var links = new Mock<IRemoteLinkProvider>().Object;
         var branch = new Mock<IBranchProvider>();
+        var usage = new Mock<IRepoUsageService>();
+        usage.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+        usage.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
 
-        var vm = new RepoItemViewModel(launcher, git, links, branch.Object)
+        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage.Object)
         {
             Name = Path.GetFileName(repoPath),
             Path = repoPath
