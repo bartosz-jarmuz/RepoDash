@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Forms;
 
@@ -50,7 +51,7 @@ public sealed class TrayBehavior : DependencyObject
         var icon = new NotifyIcon
         {
             Text = "RepoDash",
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadAppIcon() ?? System.Drawing.SystemIcons.Application,
             Visible = true
         };
 
@@ -103,5 +104,23 @@ public sealed class TrayBehavior : DependencyObject
 
         var cmd = GetShowCommand(w);
         if (cmd?.CanExecute(null) == true) cmd.Execute(null);
+    }
+
+    private static System.Drawing.Icon? LoadAppIcon()
+    {
+        try
+        {
+            var uri = new Uri("pack://application:,,,/Resources/RepoDash.ico", UriKind.Absolute);
+            var streamInfo = System.Windows.Application.GetResourceStream(uri);
+            if (streamInfo?.Stream is null) return null;
+            using var ms = new MemoryStream();
+            streamInfo.Stream.CopyTo(ms);
+            ms.Position = 0;
+            return new System.Drawing.Icon(ms);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
