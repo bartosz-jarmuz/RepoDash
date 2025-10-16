@@ -16,6 +16,9 @@
   </UserControl.Resources>
 
   <Grid Margin="0,4">
+    <Grid.InputBindings>
+      <MouseBinding Gesture="LeftDoubleClick" Command="{Binding LaunchCommand}"/>
+    </Grid.InputBindings>
     <Grid.ColumnDefinitions>
       <ColumnDefinition/>
       <ColumnDefinition Width="Auto"/>
@@ -51,9 +54,6 @@
       </TextBlock>
     </StackPanel>
     <UniformGrid Grid.Column="1" HorizontalAlignment="Right"  Rows="2">
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding LaunchCommand}" ToolTip="Launch" Margin="0,0,4,0">
-        <TextBlock Text="▶"/>
-      </Button>
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding BrowseCommand}" ToolTip="Browse" Margin="0,0,4,0">
         <TextBlock Text="📁"/>
       </Button>
@@ -95,3 +95,4 @@
     </Grid.ContextMenu>
   </Grid>
 </UserControl>
+  
