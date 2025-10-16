@@ -6,4 +6,5 @@ public interface ILauncher
     void OpenFolder(string folderPath);
     void OpenUrl(Uri url);
     void OpenGitUi(string repoPath);
+    void OpenGitCommandLine(string repoPath);
 }

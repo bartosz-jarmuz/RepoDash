@@ -187,6 +187,9 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void OpenGitUi() => _launcher.OpenGitUi(_path);
+    
+    [RelayCommand]
+    private void OpenGitCli() => _launcher.OpenGitCommandLine(_path);
 
     [RelayCommand]
     private void CopyName() => System.Windows.Clipboard.SetText(_name);

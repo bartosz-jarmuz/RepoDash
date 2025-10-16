@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
 
@@ -7,6 +7,7 @@ namespace RepoDash.Infrastructure.Processes;
 public sealed class Launcher : ILauncher
 {
     private readonly ISettingsStore<GeneralSettings> _settings;
+
     public Launcher(ISettingsStore<GeneralSettings> settings) => _settings = settings;
 
     public void OpenSolution(string solutionPath)
@@ -16,9 +17,12 @@ public sealed class Launcher : ILauncher
     {
         var tc = _settings.Current.TotalCommanderPath;
         if (!string.IsNullOrWhiteSpace(tc) && File.Exists(tc))
+        {
             Process.Start(new ProcessStartInfo(tc, $"/O /T /L=\"{folderPath}\"") { UseShellExecute = true });
-        else
-            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folderPath}\"") { UseShellExecute = true });
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folderPath}\"") { UseShellExecute = true });
     }
 
     public void OpenUrl(Uri url)
@@ -26,10 +30,95 @@ public sealed class Launcher : ILauncher
 
     public void OpenGitUi(string repoPath)
     {
+        if (string.IsNullOrWhiteSpace(repoPath)) return;
+
         var tool = _settings.Current.GitUiPath;
-        if (!string.IsNullOrWhiteSpace(tool) && File.Exists(tool))
-            Process.Start(new ProcessStartInfo(tool, $"\"{repoPath}\"") { UseShellExecute = true });
-        else
-            Process.Start(new ProcessStartInfo("bash.exe", $"--login -i -c \"cd \\\"{repoPath}\\\"; exec bash\"") { UseShellExecute = true });
+        if (!string.IsNullOrWhiteSpace(tool) && File.Exists(tool) && TryLaunchCustomTool(tool, repoPath))
+        {
+            return;
+        }
+
+        LaunchDefaultShell(repoPath);
     }
+
+    public void OpenGitCommandLine(string repoPath)
+    {
+        if (string.IsNullOrWhiteSpace(repoPath)) return;
+
+        var tool = _settings.Current.GitCliPath;
+        if (!string.IsNullOrWhiteSpace(tool) && File.Exists(tool) && TryLaunchCustomTool(tool, repoPath))
+        {
+            return;
+        }
+
+        LaunchDefaultShell(repoPath);
+    }
+
+    private static bool TryLaunchCustomTool(string executablePath, string repoPath)
+    {
+        try
+        {
+            var name = Path.GetFileName(executablePath);
+            ProcessStartInfo psi;
+
+            if (IsGitBash(name))
+            {
+                psi = new ProcessStartInfo(executablePath)
+                {
+                    UseShellExecute = false,
+                    WorkingDirectory = repoPath,
+                    Arguments = $"--cd=\"{repoPath}\""
+                };
+            }
+            else if (IsPlainBash(name))
+            {
+                psi = new ProcessStartInfo(executablePath)
+                {
+                    UseShellExecute = false,
+                    WorkingDirectory = repoPath,
+                    Arguments = "--login -i"
+                };
+            }
+            else
+            {
+                psi = new ProcessStartInfo(executablePath)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = repoPath,
+                    Arguments = $"\"{repoPath}\""
+                };
+            }
+
+            Process.Start(psi);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void LaunchDefaultShell(string repoPath)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("cmd.exe")
+            {
+                UseShellExecute = true,
+                WorkingDirectory = repoPath,
+                Arguments = $"/K \"cd /d \"{repoPath}\"\""
+            });
+        }
+        catch
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{repoPath}\"") { UseShellExecute = true });
+        }
+    }
+
+    private static bool IsGitBash(string? fileName)
+        => string.Equals(fileName, "git-bash.exe", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPlainBash(string? fileName)
+        => string.Equals(fileName, "bash.exe", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(fileName, "bash", StringComparison.OrdinalIgnoreCase);
 }
