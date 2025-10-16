@@ -54,6 +54,19 @@ public sealed class Launcher : ILauncher
         LaunchDefaultShell(repoPath);
     }
 
+    public void OpenNonSlnRepo(string repoPath)
+    {
+        if (string.IsNullOrWhiteSpace(repoPath)) return;
+
+        var editor = _settings.Current.NonSlnRepoEditorPath;
+        if (!string.IsNullOrWhiteSpace(editor) && File.Exists(editor) && TryLaunchCustomTool(editor, repoPath))
+        {
+            return;
+        }
+
+        OpenFolder(repoPath);
+    }
+
     private static bool TryLaunchCustomTool(string executablePath, string repoPath)
     {
         try

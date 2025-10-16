@@ -157,7 +157,7 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         }
         else
         {
-            _launcher.OpenFolder(_path);
+            _launcher.OpenNonSlnRepo(_path);
         }
         RequestClearSearch?.Invoke();
     }
@@ -187,7 +187,7 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void OpenGitUi() => _launcher.OpenGitUi(_path);
-    
+
     [RelayCommand]
     private void OpenGitCli() => _launcher.OpenGitCommandLine(_path);
 
