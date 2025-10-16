@@ -10,7 +10,8 @@
     <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="Resources\RepoDash.ico" />
+    <Resource Include="Resources\RepoDash.ico" />
+    <Resource Include="Resources\RepoDash.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />

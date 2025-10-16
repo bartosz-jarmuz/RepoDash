@@ -4,7 +4,7 @@ using RepoDash.Core.Abstractions;
 
 namespace RepoDash.App.ViewModels.Settings
 {
-    public partial class SettingsViewModel<TSettings> : ObservableObject, ISettingsViewModel
+    public partial class SettingsViewModel<TSettings> : ObservableObject
         where TSettings : class, new()
     {
         private readonly ISettingsStore<TSettings> _store;
