@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -241,6 +241,7 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         UsageCount = usageCount;
     }
 
+
     private void MarkUsed()
     {
         if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Path)) return;
@@ -268,3 +269,4 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         _statusCts = null;
     }
 }
+

@@ -7,4 +7,5 @@ public interface ISettingsWindowService
     bool? ShowShortcuts();
     bool? ShowColors();
     bool? ShowExternalTools();
+    bool? ShowBlacklistedItems();
 }

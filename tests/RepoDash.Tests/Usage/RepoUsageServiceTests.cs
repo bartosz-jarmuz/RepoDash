@@ -87,6 +87,20 @@ public sealed class RepoUsageServiceTests
     }
 
     [Test]
+    public void ToggleBlacklisted_AddsEntryToBlacklistedItems()
+    {
+        var service = CreateService(out _);
+
+        var added = service.ToggleBlacklisted("Hidden", "C:/dev/hidden");
+        Assert.That(added, Is.True);
+
+        var items = service.GetBlacklistedItems();
+        Assert.That(items, Has.Count.EqualTo(1));
+        Assert.That(items[0].RepoName, Is.EqualTo("Hidden"));
+        Assert.That(items[0].RepoPath, Is.EqualTo("C:/dev/hidden"));
+    }
+
+    [Test]
     public void TogglePinned_TogglesStateByName()
     {
         var service = CreateService(out _);
@@ -120,6 +134,7 @@ public sealed class RepoUsageServiceTests
 
         service.RecordUsage(snapshot);
         Assert.That(service.GetRecent(5), Has.Count.EqualTo(1));
+        Assert.That(service.GetBlacklistedItems(), Is.Empty);
 
         var blacklisted = service.ToggleBlacklisted(snapshot.RepoName, snapshot.RepoPath);
         Assert.That(blacklisted, Is.True);
@@ -127,11 +142,13 @@ public sealed class RepoUsageServiceTests
 
         Assert.That(service.GetRecent(5), Is.Empty);
         Assert.That(service.GetFrequent(5), Is.Empty);
+        Assert.That(service.GetBlacklistedItems(), Has.Count.EqualTo(1));
 
         // Toggle back to confirm it reappears
         blacklisted = service.ToggleBlacklisted(snapshot.RepoName, snapshot.RepoPath);
         Assert.That(blacklisted, Is.False);
         Assert.That(service.GetRecent(5), Has.Count.EqualTo(1));
+        Assert.That(service.GetBlacklistedItems(), Is.Empty);
     }
 
     [Test]
@@ -163,3 +180,4 @@ public sealed class RepoUsageServiceTests
         return new RepoUsageService(storeMock.Object);
     }
 }
+

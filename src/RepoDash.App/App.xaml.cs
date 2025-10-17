@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.Abstractions;
 using RepoDash.App.Services;
+using RepoDash.App.ViewModels;
 using RepoDash.App.ViewModels.Settings;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.NullObjects;
@@ -59,6 +60,7 @@ public partial class App : Application
         sc.AddSingleton<IRepoUsageService, RepoUsageService>();
 
         sc.AddSingleton<ViewModels.MainViewModel>();
+        sc.AddTransient<BlacklistedItemsViewModel>();
 
         // open-generic settings VM
         sc.AddSingleton(typeof(IReadOnlySettingsSource<>), typeof(SettingsSource<>));

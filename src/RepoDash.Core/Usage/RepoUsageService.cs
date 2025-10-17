@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using RepoDash.Core.Abstractions;
 
 namespace RepoDash.Core.Usage;
@@ -11,6 +16,7 @@ public sealed class RepoUsageService : IRepoUsageService
     private readonly HashSet<string> _pinnedNames;
     private readonly HashSet<string> _blacklistedPaths;
     private readonly HashSet<string> _blacklistedNames;
+    private readonly Dictionary<string, RepoBlacklistItem> _blacklistedItems;
     private readonly StringComparer _pathComparer = StringComparer.OrdinalIgnoreCase;
     private readonly StringComparer _nameComparer = StringComparer.OrdinalIgnoreCase;
 
@@ -42,6 +48,40 @@ public sealed class RepoUsageService : IRepoUsageService
         _pinnedNames = new HashSet<string>(state.PinnedNames ?? [], _nameComparer);
         _blacklistedPaths = new HashSet<string>(state.BlacklistedPaths.Select(NormalizePath), _pathComparer);
         _blacklistedNames = new HashSet<string>(state.BlacklistedNames ?? [], _nameComparer);
+        _blacklistedItems = new Dictionary<string, RepoBlacklistItem>(_pathComparer);
+
+        foreach (var item in state.BlacklistedItems ?? [])
+        {
+            var normalizedPath = NormalizePath(item.RepoPath);
+            _blacklistedItems[normalizedPath] = new RepoBlacklistItem
+            {
+                RepoName = item.RepoName,
+                RepoPath = item.RepoPath
+            };
+            _blacklistedPaths.Add(normalizedPath);
+            _blacklistedNames.Add(NormalizeName(item.RepoName));
+        }
+
+        foreach (var path in _blacklistedPaths.ToList())
+        {
+            if (_blacklistedItems.ContainsKey(path)) continue;
+
+            var entry = _entriesByPath.TryGetValue(path, out var usageEntry) ? usageEntry : null;
+            var repoPath = entry?.RepoPath ?? path;
+            var repoName = entry?.RepoName ??
+                           (state.BlacklistedNames?.FirstOrDefault() ?? Path.GetFileName(repoPath));
+
+            if (string.IsNullOrWhiteSpace(repoName))
+                repoName = repoPath;
+
+            var normalizedName = NormalizeName(repoName);
+            _blacklistedItems[path] = new RepoBlacklistItem
+            {
+                RepoName = repoName,
+                RepoPath = repoPath
+            };
+            _blacklistedNames.Add(normalizedName);
+        }
     }
 
     public void RecordUsage(RepoUsageSnapshot snapshot)
@@ -94,6 +134,30 @@ public sealed class RepoUsageService : IRepoUsageService
             if (_blacklistedNames.Contains(normalizedName))
             {
                 _blacklistedPaths.Add(normalizedPath);
+                if (_blacklistedItems.TryGetValue(normalizedPath, out var existing))
+                {
+                    _blacklistedItems[normalizedPath] = existing with
+                    {
+                        RepoName = snapshot.RepoName,
+                        RepoPath = snapshot.RepoPath
+                    };
+                }
+                else
+                {
+                    _blacklistedItems[normalizedPath] = new RepoBlacklistItem
+                    {
+                        RepoName = snapshot.RepoName,
+                        RepoPath = snapshot.RepoPath
+                    };
+                }
+            }
+            else if (_blacklistedItems.TryGetValue(normalizedPath, out var stale))
+            {
+                _blacklistedItems[normalizedPath] = stale with
+                {
+                    RepoName = snapshot.RepoName,
+                    RepoPath = snapshot.RepoPath
+                };
             }
         }
 
@@ -160,6 +224,20 @@ public sealed class RepoUsageService : IRepoUsageService
         }
     }
 
+    public IReadOnlyList<RepoBlacklistItem> GetBlacklistedItems()
+    {
+        lock (_gate)
+        {
+            var items = _blacklistedItems.Values
+                .Select(i => i with { })
+                .OrderBy(i => i.RepoName, _nameComparer)
+                .ThenBy(i => i.RepoPath, _pathComparer)
+                .ToList();
+
+            return items;
+        }
+    }
+
     public bool TogglePinned(string repoName, string repoPath)
     {
         var normalizedPath = NormalizePath(repoPath);
@@ -198,6 +276,8 @@ public sealed class RepoUsageService : IRepoUsageService
             if (_blacklistedNames.Contains(normalizedName) || _blacklistedPaths.Contains(normalizedPath))
             {
                 _blacklistedNames.Remove(normalizedName);
+                _blacklistedPaths.Remove(normalizedPath);
+                _blacklistedItems.Remove(normalizedPath);
                 RemoveBlacklistedPathsForName(normalizedName);
                 result = false;
             }
@@ -205,6 +285,11 @@ public sealed class RepoUsageService : IRepoUsageService
             {
                 _blacklistedNames.Add(normalizedName);
                 _blacklistedPaths.Add(normalizedPath);
+                _blacklistedItems[normalizedPath] = new RepoBlacklistItem
+                {
+                    RepoName = repoName,
+                    RepoPath = repoPath
+                };
                 result = true;
             }
         }
@@ -232,7 +317,9 @@ public sealed class RepoUsageService : IRepoUsageService
 
         lock (_gate)
         {
-            return _blacklistedNames.Contains(normalizedName) || _blacklistedPaths.Contains(normalizedPath);
+            return _blacklistedNames.Contains(normalizedName)
+                || _blacklistedPaths.Contains(normalizedPath)
+                || _blacklistedItems.ContainsKey(normalizedPath);
         }
     }
 
@@ -254,16 +341,14 @@ public sealed class RepoUsageService : IRepoUsageService
 
     private void RemoveBlacklistedPathsForName(string normalizedName)
     {
-        var toRemove = new List<string>();
-        foreach (var kv in _entriesByPath)
-        {
-            if (string.Equals(NormalizeName(kv.Value.RepoName), normalizedName, StringComparison.OrdinalIgnoreCase))
-            {
-                toRemove.Add(kv.Key);
-            }
-        }
+        var toRemove = _blacklistedItems
+            .Where(kv => string.Equals(NormalizeName(kv.Value.RepoName), normalizedName, StringComparison.OrdinalIgnoreCase))
+            .Select(kv => kv.Key)
+            .ToList();
+
         foreach (var key in toRemove)
         {
+            _blacklistedItems.Remove(key);
             _blacklistedPaths.Remove(key);
         }
     }
@@ -272,7 +357,9 @@ public sealed class RepoUsageService : IRepoUsageService
     {
         var normalizedPath = NormalizePath(repoPath);
         var normalizedName = NormalizeName(repoName);
-        return _blacklistedNames.Contains(normalizedName) || _blacklistedPaths.Contains(normalizedPath);
+        return _blacklistedNames.Contains(normalizedName)
+            || _blacklistedPaths.Contains(normalizedPath)
+            || _blacklistedItems.ContainsKey(normalizedPath);
     }
 
     private static string NormalizePath(string path)
@@ -309,7 +396,8 @@ public sealed class RepoUsageService : IRepoUsageService
             PinnedPaths = _pinnedPaths.ToList(),
             PinnedNames = _pinnedNames.ToList(),
             BlacklistedPaths = _blacklistedPaths.ToList(),
-            BlacklistedNames = _blacklistedNames.ToList()
+            BlacklistedNames = _blacklistedNames.ToList(),
+            BlacklistedItems = _blacklistedItems.Values.Select(i => i with { }).ToList()
         };
     }
 

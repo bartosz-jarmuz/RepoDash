@@ -12,6 +12,8 @@ public interface IRepoUsageService
 
     IReadOnlyList<RepoUsageSummary> GetFrequent(int maxCount);
 
+    IReadOnlyList<RepoBlacklistItem> GetBlacklistedItems();
+
     bool TogglePinned(string repoName, string repoPath);
 
     bool ToggleBlacklisted(string repoName, string repoPath);

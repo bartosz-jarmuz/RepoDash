@@ -63,10 +63,10 @@
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenPipelinesCommand}" ToolTip="Pipelines" Margin="0,0,4,0">
         <TextBlock Text="🛳️"/>
       </Button>
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitCliCommand}" ToolTip="Git UI" Margin="0,0,4,0">
+      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitCliCommand}" ToolTip="Git Command line" Margin="0,0,4,0">
         <TextBlock Text="⌨️"/>
       </Button>
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitUiCommand}" ToolTip="Git Command line" Margin="0,0,4,0">
+      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitUiCommand}" ToolTip="Git UI" Margin="0,0,4,0">
         <TextBlock Text="👷‍"/>
       </Button>
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding CopyNameCommand}" ToolTip="Copy name" Margin="0,0,4,0">
@@ -93,9 +93,8 @@
         <MenuItem Header="Copy Path" Command="{Binding CopyPathCommand}"/>
         <Separator/>
         <MenuItem Header="Pin" Command="{Binding TogglePinCommand}" IsCheckable="True" IsChecked="{Binding IsPinned}"/>
-        <MenuItem Header="Blacklist" Command="{Binding ToggleBlacklistCommand}" IsCheckable="True" IsChecked="{Binding IsBlacklisted}"/>
+        <MenuItem Header="Hide from recent/frequent" Command="{Binding ToggleBlacklistCommand}"/>
       </ContextMenu>
     </Grid.ContextMenu>
   </Grid>
 </UserControl>
-  
