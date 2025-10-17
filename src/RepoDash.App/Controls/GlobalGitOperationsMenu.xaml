@@ -8,9 +8,9 @@
              d:DataContext="{d:DesignInstance vm:GlobalGitOperationsMenuViewModel}">
   <Menu VerticalAlignment="Center">
     <MenuItem Header="Git">
-      <MenuItem Header="Fetch all" Command="{Binding GitFetchAllAsyncCommand}"/>
-      <MenuItem Header="Pull all (merge)" Command="{Binding GitPullAllAsyncCommand}"/>
-      <MenuItem Header="Pull all (rebase)" Command="{Binding GitPullRebaseAllAsyncCommand}"/>
+      <MenuItem Header="Fetch all" Command="{Binding GitFetchAllCommand}"/>
+      <MenuItem Header="Pull all (merge)" Command="{Binding GitPullAllCommand}"/>
+      <MenuItem Header="Pull all (rebase)" Command="{Binding GitPullRebaseAllCommand}"/>
     </MenuItem>
   </Menu>
 </UserControl>
