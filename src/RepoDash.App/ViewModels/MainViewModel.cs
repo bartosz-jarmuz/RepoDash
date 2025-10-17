@@ -127,6 +127,12 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _refreshCts;
 
     [RelayCommand]
+    private void FocusSearch()
+    {
+        RequestFocusSearch();
+    }
+
+    [RelayCommand]
     public async Task LoadCurrentRootAsync()
     {
         var root = RepoRoot.RepoRootInput?.Trim();
@@ -361,6 +367,7 @@ public partial class MainViewModel : ObservableObject
 
     public void RequestFocusSearch()
     {
+        FocusSearchRequested = false;
         FocusSearchRequested = true;
         App.Current?.Dispatcher.InvokeAsync(() => FocusSearchRequested = false, DispatcherPriority.ApplicationIdle);
     }
