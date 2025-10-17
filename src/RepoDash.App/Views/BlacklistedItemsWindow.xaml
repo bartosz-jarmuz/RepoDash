@@ -8,7 +8,7 @@
         d:DataContext="{d:DesignInstance vm:BlacklistedItemsViewModel}"
         Title="Manage Blacklisted Repositories"
         Width="640"
-        Height="720"
+        Height="420"
         WindowStartupLocation="CenterOwner">
   <Window.Resources>
     <ResourceDictionary>
