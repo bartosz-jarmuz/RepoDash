@@ -49,12 +49,30 @@ public sealed class GeneralSettings
         "Use \"/-/pipelines\" for GitLab (default). Use \"/actions\" for GitHub Actions.")]
     public string RemotePipelinesUrlPart { get; set; } = "/-/pipelines";
 
-    //public int AutoCompleteWhenAtMost { get; set; } = 5;
-    //public int StatusPollIntervalSeconds { get; set; } = 120;
-    //public int StatusPollTopPercent { get; set; } = 20;
-    //public bool StatusOnDemandOnly { get; set; } = false;
-    //public bool ShowRecent { get; set; } = true;
-    //public bool ShowFrequent { get; set; } = true;
+    [Category("6. Recent and frequently used repos")]
+    public bool ShowRecent { get; set; } = true;
 
-  
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Recent items limit")]
+    public int RecentItemsLimit { get; set; } = 10;
+
+    [Category("6. Recent and frequently used repos")]
+    public bool ShowFrequent { get; set; } = true;
+
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Frequent items limit")]
+    public int FrequentItemsLimit { get; set; } = 10;
+
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Pins apply to Recent")]
+    public bool PinningAppliesToRecent { get; set; } = true;
+
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Pins apply to Frequent")]
+    public bool PinningAppliesToFrequent { get; set; } = true;
+
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Pins apply to grouped repositories")]
+    public bool PinningAppliesToAutomaticGroupings { get; set; } = true;
+
 }

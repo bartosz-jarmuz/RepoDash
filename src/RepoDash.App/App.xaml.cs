@@ -1,10 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.Abstractions;
 using RepoDash.App.Services;
+using RepoDash.App.ViewModels;
 using RepoDash.App.ViewModels.Settings;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.NullObjects;
 using RepoDash.Core.Settings;
+using RepoDash.Core.Usage;
 using RepoDash.Infrastructure.Git;
 using RepoDash.Infrastructure.Processes;
 using RepoDash.Infrastructure.Remote;
@@ -39,6 +41,7 @@ public partial class App : Application
 
         Directory.CreateDirectory(AppPaths.SettingsDir);
         Directory.CreateDirectory(AppPaths.CacheDir);
+        Directory.CreateDirectory(AppPaths.UsageDir);
 
         var sc = new ServiceCollection();
 
@@ -52,9 +55,12 @@ public partial class App : Application
 
 
         sc.AddSingleton<IRepoCacheStore, JsonRepoCacheStore>();
+        sc.AddSingleton<IRepoUsageStore, JsonRepoUsageStore>();
         sc.AddSingleton<RepoCacheService>();
+        sc.AddSingleton<IRepoUsageService, RepoUsageService>();
 
         sc.AddSingleton<ViewModels.MainViewModel>();
+        sc.AddTransient<BlacklistedItemsViewModel>();
 
         // open-generic settings VM
         sc.AddSingleton(typeof(IReadOnlySettingsSource<>), typeof(SettingsSource<>));

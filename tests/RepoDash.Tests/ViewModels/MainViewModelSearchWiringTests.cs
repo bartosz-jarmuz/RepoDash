@@ -9,6 +9,7 @@ using RepoDash.App.Abstractions;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Caching;
 using RepoDash.Core.Settings;
+using RepoDash.Core.Usage;
 using RepoDash.Tests.TestingUtilities;
 
 namespace RepoDash.Tests
@@ -121,6 +122,11 @@ namespace RepoDash.Tests
 
             var cacheStore = new Mock<IRepoCacheStore>();
             var cache = new RepoCacheService(cacheStore.Object, scanner.Object, branch.Object);
+            var usage = new Mock<IRepoUsageService>();
+            usage.Setup(u => u.GetRecent(It.IsAny<int>())).Returns(Array.Empty<RepoUsageEntry>());
+            usage.Setup(u => u.GetFrequent(It.IsAny<int>())).Returns(Array.Empty<RepoUsageSummary>());
+            usage.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+            usage.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
 
             return new MainViewModel(
                 generalSource.Object,
@@ -129,7 +135,8 @@ namespace RepoDash.Tests
                 branch.Object,
                 links.Object,
                 settingsMenuVm,
-                cache);
+                cache,
+                usage.Object);
         }
 
         private static RepoItemViewModel MakeRepoItem(string repoPath)
@@ -138,8 +145,11 @@ namespace RepoDash.Tests
             var git = new Mock<IGitService>().Object;
             var links = new Mock<IRemoteLinkProvider>().Object;
             var branch = new Mock<IBranchProvider>();
+            var usage = new Mock<IRepoUsageService>();
+            usage.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+            usage.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
 
-            return new RepoItemViewModel(launcher, git, links, branch.Object)
+            return new RepoItemViewModel(launcher, git, links, branch.Object, usage.Object)
             {
                 Name = Path.GetFileName(repoPath),
                 Path = repoPath

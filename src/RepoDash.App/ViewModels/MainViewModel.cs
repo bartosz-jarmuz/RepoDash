@@ -1,9 +1,12 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RepoDash.App.Abstractions;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Caching;
 using RepoDash.Core.Settings;
+using RepoDash.Core.Usage;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Threading;
 
@@ -17,6 +20,8 @@ public partial class MainViewModel : ObservableObject
     private readonly IBranchProvider _branchProvider;
     private readonly IRemoteLinkProvider _links;
     private readonly RepoCacheService _cacheService;
+    private readonly IRepoUsageService _usage;
+    private readonly List<RepoItemViewModel> _detachedUsageItems = new();
 
     [ObservableProperty] private bool _focusSearchRequested;
 
@@ -33,7 +38,8 @@ public partial class MainViewModel : ObservableObject
         IBranchProvider branchProvider,
         IRemoteLinkProvider links,
         SettingsMenuViewModel settingsMenuVm,
-        RepoCacheService cacheService)
+        RepoCacheService cacheService,
+        IRepoUsageService usage)
     {
         _generalSettings = generalSettings;
         _launcher = launcher;
@@ -41,6 +47,7 @@ public partial class MainViewModel : ObservableObject
         _branchProvider = branchProvider;
         _links = links;
         _cacheService = cacheService;
+        _usage = usage;
 
         // Child VMs
         SearchBar = new SearchBarViewModel();
@@ -48,6 +55,7 @@ public partial class MainViewModel : ObservableObject
         SettingsMenu = settingsMenuVm;
         RepoGroups = new RepoGroupsViewModel(_generalSettings);
         GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
+        _usage.Changed += OnUsageChanged;
 
         // Initial values
         RepoRoot.RepoRootInput = _generalSettings.Current.RepoRoot;
@@ -97,6 +105,7 @@ public partial class MainViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(Settings));
             OnPropertyChanged(nameof(WindowTitle));
+            UpdateUsageGroups();
         };
     }
 
@@ -212,6 +221,7 @@ public partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(WindowTitle));
+        UpdateUsageGroups();
     }
 
     private void ApplySnapshot(IReadOnlyList<CachedRepo> snapshot)
@@ -230,6 +240,7 @@ public partial class MainViewModel : ObservableObject
 
         RepoGroups.Load(itemsByGroup);
         RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+        UpdateUsageGroups();
     }
 
     private void Upsert(CachedRepo r)
@@ -241,7 +252,7 @@ public partial class MainViewModel : ObservableObject
 
     private RepoItemViewModel MakeRepoItemVm(CachedRepo r)
     {
-        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider)
+        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider, _usage)
         {
             Name = r.RepoName,
             Path = r.RepoPath,
@@ -252,7 +263,95 @@ public partial class MainViewModel : ObservableObject
         // use lightweight branch load first; heavy status can be triggered by user or virtualization
         _ = vm.EnsureBranchLoadedAsync();
         vm.RequestClearSearch = () => SearchBar.ClearCommand.Execute(null);
+        vm.RefreshUsageFlags();
 
+        return vm;
+    }
+
+    private void OnUsageChanged(object? sender, EventArgs e)
+        => Dispatch(() => UpdateUsageGroups());
+
+    private void UpdateUsageGroups()
+    {
+        DisposeDetachedUsageItems();
+
+        var recentLimit = Math.Max(0, Settings.RecentItemsLimit);
+        var recentEntries = recentLimit > 0 ? _usage.GetRecent(recentLimit) : Array.Empty<RepoUsageEntry>();
+        var recentItems = BuildRecentItems(recentEntries);
+        var showRecent = Settings.ShowRecent && recentLimit > 0;
+        RepoGroups.SetRecentItems(recentItems, showRecent);
+
+        var frequentLimit = Math.Max(0, Settings.FrequentItemsLimit);
+        var frequentEntries = frequentLimit > 0 ? _usage.GetFrequent(frequentLimit) : Array.Empty<RepoUsageSummary>();
+        var frequentItems = BuildFrequentItems(frequentEntries);
+        var showFrequent = Settings.ShowFrequent && frequentLimit > 0;
+        RepoGroups.SetFrequentItems(frequentItems, showFrequent);
+
+        RepoGroups.RefreshPinningSettings();
+        RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+    }
+
+    private void DisposeDetachedUsageItems()
+    {
+        if (_detachedUsageItems.Count == 0) return;
+        foreach (var vm in _detachedUsageItems)
+        {
+            vm.Dispose();
+        }
+        _detachedUsageItems.Clear();
+    }
+
+    private IEnumerable<RepoItemViewModel> BuildRecentItems(IReadOnlyList<RepoUsageEntry> entries)
+    {
+        var result = new List<RepoItemViewModel>(entries.Count);
+        foreach (var entry in entries)
+        {
+            var existing = RepoGroups.TryGetByPath(entry.RepoPath);
+            if (existing is not null)
+            {
+                existing.ApplyUsageMetrics(entry.LastUsedUtc, entry.UsageCount);
+                existing.RefreshUsageFlags();
+                result.Add(existing);
+                continue;
+            }
+
+            var vm = CreateDetachedUsageItem(entry);
+            result.Add(vm);
+        }
+
+        return result;
+    }
+
+    private IEnumerable<RepoItemViewModel> BuildFrequentItems(IReadOnlyList<RepoUsageSummary> summaries)
+    {
+        var result = new List<RepoItemViewModel>(summaries.Count);
+        foreach (var summary in summaries)
+        {
+            var existing = RepoGroups.TryGetByName(summary.RepoName);
+            if (existing is null) continue;
+
+            existing.ApplyUsageMetrics(summary.LastUsedUtc, summary.UsageCount);
+            existing.RefreshUsageFlags();
+            result.Add(existing);
+        }
+        return result;
+    }
+
+    private RepoItemViewModel CreateDetachedUsageItem(RepoUsageEntry entry)
+    {
+        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider, _usage)
+        {
+            Name = entry.RepoName,
+            Path = entry.RepoPath,
+            HasGit = entry.HasGit,
+            HasSolution = entry.HasSolution,
+            SolutionPath = entry.SolutionPath
+        };
+        vm.RequestClearSearch = () => SearchBar.ClearCommand.Execute(null);
+        vm.ApplyUsageMetrics(entry.LastUsedUtc, entry.UsageCount);
+        vm.RefreshUsageFlags();
+        _ = vm.EnsureBranchLoadedAsync();
+        _detachedUsageItems.Add(vm);
         return vm;
     }
 

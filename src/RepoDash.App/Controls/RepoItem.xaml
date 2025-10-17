@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:RepoDash.App.Controls"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:RepoItemViewModel}">
   <UserControl.Resources>
@@ -24,35 +25,62 @@
       <ColumnDefinition Width="Auto"/>
     </Grid.ColumnDefinitions>
 
-    <!-- Left: title + tiny branch -->
-    <StackPanel>
-      <TextBlock>
-        <Run Text="{Binding Name}" FontWeight="SemiBold"/>
-      </TextBlock>
+    <!-- Left: title + tiny branch (+ optional pin icon) -->
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
 
-      <TextBlock FontSize="10" Margin="0,2,0,0">
+      <TextBlock Grid.Column="0"
+                 Text="📌"
+                 FontSize="14"
+                 Margin="0,0,6,0"
+                 VerticalAlignment="Center">
         <TextBlock.Style>
           <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource BrushTextSubtle}"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
             <Style.Triggers>
-              <DataTrigger Binding="{Binding SyncState}" Value="UpToDate">
-                <Setter Property="Foreground" Value="Green"/>
+              <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                <Setter Property="Visibility" Value="Visible"/>
               </DataTrigger>
-              <DataTrigger Binding="{Binding SyncState}" Value="Ahead">
-                <Setter Property="Foreground" Value="DodgerBlue"/>
-              </DataTrigger>
-              <DataTrigger Binding="{Binding SyncState}" Value="Behind">
-                <Setter Property="Foreground" Value="DarkOrange"/>
+              <DataTrigger Binding="{Binding AllowPinning, RelativeSource={RelativeSource AncestorType=controls:RepoItem}}" Value="False">
+                <Setter Property="Visibility" Value="Collapsed"/>
               </DataTrigger>
             </Style.Triggers>
           </Style>
         </TextBlock.Style>
-        <TextBlock Text="*" Foreground="Red" FontWeight="Black"
-                   Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"
-                   FontSize="10" Margin="0" Padding="0"/>
-        <Run Text="{Binding CurrentBranch}"/>
       </TextBlock>
-    </StackPanel>
+
+      <StackPanel Grid.Column="1">
+        <TextBlock>
+          <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+        </TextBlock>
+
+        <TextBlock FontSize="10" Margin="0,2,0,0">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Foreground" Value="{StaticResource BrushTextSubtle}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding SyncState}" Value="UpToDate">
+                  <Setter Property="Foreground" Value="Green"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SyncState}" Value="Ahead">
+                  <Setter Property="Foreground" Value="DodgerBlue"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SyncState}" Value="Behind">
+                  <Setter Property="Foreground" Value="DarkOrange"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+          <TextBlock Text="*" Foreground="Red" FontWeight="Black"
+                     Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"
+                     FontSize="10" Margin="0" Padding="0"/>
+          <Run Text="{Binding CurrentBranch}"/>
+        </TextBlock>
+      </StackPanel>
+    </Grid>
     <UniformGrid Grid.Column="1" HorizontalAlignment="Right"  Rows="2">
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding BrowseCommand}" ToolTip="Browse" Margin="0,0,4,0">
         <TextBlock Text="📁"/>
@@ -63,10 +91,10 @@
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenPipelinesCommand}" ToolTip="Pipelines" Margin="0,0,4,0">
         <TextBlock Text="🛳️"/>
       </Button>
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitCliCommand}" ToolTip="Git UI" Margin="0,0,4,0">
+      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitCliCommand}" ToolTip="Git Command line" Margin="0,0,4,0">
         <TextBlock Text="⌨️"/>
       </Button>
-      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitUiCommand}" ToolTip="Git Command line" Margin="0,0,4,0">
+      <Button Style="{StaticResource IconFlatButton}" Command="{Binding OpenGitUiCommand}" ToolTip="Git UI" Margin="0,0,4,0">
         <TextBlock Text="👷‍"/>
       </Button>
       <Button Style="{StaticResource IconFlatButton}" Command="{Binding CopyNameCommand}" ToolTip="Copy name" Margin="0,0,4,0">
@@ -91,8 +119,10 @@
         <Separator/>
         <MenuItem Header="Copy Name" Command="{Binding CopyNameCommand}"/>
         <MenuItem Header="Copy Path" Command="{Binding CopyPathCommand}"/>
+        <Separator/>
+        <MenuItem Header="Pin" Command="{Binding TogglePinCommand}" IsCheckable="True" IsChecked="{Binding IsPinned, Mode=OneWay}"/>
+        <MenuItem Header="Hide from recent/frequent" Command="{Binding ToggleBlacklistCommand}"/>
       </ContextMenu>
     </Grid.ContextMenu>
   </Grid>
 </UserControl>
-  

@@ -13,6 +13,8 @@
       <MenuItem Header="Shortcuts" Command="{Binding OpenShortcutsSettingsCommand}" />
       <MenuItem Header="Colors" Command="{Binding OpenColorSettingsCommand}" />
       <MenuItem Header="External Tools" Command="{Binding OpenExternalToolsSettingsCommand}" />
+      <Separator/>
+      <MenuItem Header="Manage Blacklisted Items" Command="{Binding ManageBlacklistedItemsCommand}" />
     </MenuItem>
   </Menu>
 </UserControl>
