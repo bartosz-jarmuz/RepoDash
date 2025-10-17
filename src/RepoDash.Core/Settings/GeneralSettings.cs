@@ -63,4 +63,16 @@ public sealed class GeneralSettings
     [DisplayName("Frequent items limit")]
     public int FrequentItemsLimit { get; set; } = 10;
 
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Pins apply to Recent")]
+    public bool PinningAppliesToRecent { get; set; } = true;
+
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Pins apply to Frequent")]
+    public bool PinningAppliesToFrequent { get; set; } = true;
+
+    [Category("6. Recent and frequently used repos")]
+    [DisplayName("Pins apply to grouped repositories")]
+    public bool PinningAppliesToAutomaticGroupings { get; set; } = true;
+
 }

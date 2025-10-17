@@ -1,4 +1,7 @@
-﻿using System.Threading;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
@@ -100,6 +103,19 @@ public sealed class RepoUsageServiceTests
         Assert.That(items[0].RepoPath, Is.EqualTo("C:/dev/hidden"));
     }
 
+
+    [Test]
+    public void PinnedStatePersistsAcrossRestart()
+    {
+        var store = new InMemoryUsageStore();
+        var usage1 = new RepoUsageService(store);
+
+        Assert.That(usage1.TogglePinned("Repo", "C:/dev/repo"), Is.True);
+        SpinWait.SpinUntil(() => store.WriteCount > 0, TimeSpan.FromSeconds(1));
+
+        var usage2 = new RepoUsageService(store);
+        Assert.That(usage2.IsPinned("Repo", "C:/dev/repo"), Is.True);
+    }
     [Test]
     public void TogglePinned_TogglesStateByName()
     {
@@ -181,3 +197,30 @@ public sealed class RepoUsageServiceTests
     }
 }
 
+
+internal sealed class InMemoryUsageStore : IRepoUsageStore
+{
+        private RepoUsageState _state = new();
+        private int _writeCount;
+
+        public int WriteCount => Volatile.Read(ref _writeCount);
+
+        public Task<RepoUsageState> ReadAsync(CancellationToken ct) => Task.FromResult(Clone(_state));
+
+        public Task WriteAsync(RepoUsageState state, CancellationToken ct)
+        {
+            _state = Clone(state);
+            Interlocked.Increment(ref _writeCount);
+            return Task.CompletedTask;
+        }
+
+        private static RepoUsageState Clone(RepoUsageState source) => new()
+        {
+            Entries = source.Entries.Select(e => e with { }).ToList(),
+            PinnedPaths = new List<string>(source.PinnedPaths),
+            PinnedNames = new List<string>(source.PinnedNames),
+            BlacklistedPaths = new List<string>(source.BlacklistedPaths),
+            BlacklistedNames = new List<string>(source.BlacklistedNames),
+            BlacklistedItems = source.BlacklistedItems.Select(i => i with { }).ToList()
+        };
+    }

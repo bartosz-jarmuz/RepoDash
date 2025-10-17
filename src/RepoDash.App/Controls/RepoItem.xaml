@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:RepoDash.App.Controls"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:RepoItemViewModel}">
   <UserControl.Resources>
@@ -35,8 +36,21 @@
                  Text="📌"
                  FontSize="14"
                  Margin="0,0,6,0"
-                 VerticalAlignment="Center"
-                 Visibility="{Binding IsPinned, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                 VerticalAlignment="Center">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                <Setter Property="Visibility" Value="Visible"/>
+              </DataTrigger>
+              <DataTrigger Binding="{Binding AllowPinning, RelativeSource={RelativeSource AncestorType=controls:RepoItem}}" Value="False">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
 
       <StackPanel Grid.Column="1">
         <TextBlock>
@@ -106,7 +120,7 @@
         <MenuItem Header="Copy Name" Command="{Binding CopyNameCommand}"/>
         <MenuItem Header="Copy Path" Command="{Binding CopyPathCommand}"/>
         <Separator/>
-        <MenuItem Header="Pin" Command="{Binding TogglePinCommand}" IsCheckable="True" IsChecked="{Binding IsPinned}"/>
+        <MenuItem Header="Pin" Command="{Binding TogglePinCommand}" IsCheckable="True" IsChecked="{Binding IsPinned, Mode=OneWay}"/>
         <MenuItem Header="Hide from recent/frequent" Command="{Binding ToggleBlacklistCommand}"/>
       </ContextMenu>
     </Grid.ContextMenu>

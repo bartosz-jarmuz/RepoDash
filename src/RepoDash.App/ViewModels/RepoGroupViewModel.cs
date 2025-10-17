@@ -27,6 +27,18 @@ public partial class RepoGroupViewModel : ObservableObject
     public bool IsSpecial { get; set; }
     public bool ExcludeBlacklisted { get; set; }
     public Comparison<RepoItemViewModel> SortComparison { get; set; } = DefaultComparison;
+    private bool _allowPinning = true;
+
+    public bool AllowPinning
+    {
+        get => _allowPinning;
+        set
+        {
+            if (_allowPinning == value) return;
+            _allowPinning = value;
+            ApplyFilter(_currentFilter);
+        }
+    }
 
     public GeneralSettings Settings => _settings.Current;
 
@@ -138,13 +150,33 @@ public partial class RepoGroupViewModel : ObservableObject
     {
         var list = items.ToList();
         var comparer = SortComparison ?? DefaultComparison;
-        list.Sort(comparer);
+        if (AllowPinning)
+        {
+            list.Sort((a, b) =>
+            {
+                if (a.IsPinned != b.IsPinned)
+                    return a.IsPinned ? -1 : 1;
+                return comparer(a, b);
+            });
+        }
+        else
+        {
+            var indexMap = _allItems
+                .Select((item, idx) => new { item, idx })
+                .ToDictionary(x => x.item, x => x.idx);
+
+            list.Sort((a, b) =>
+            {
+                var idxA = indexMap.TryGetValue(a, out var ia) ? ia : int.MaxValue;
+                var idxB = indexMap.TryGetValue(b, out var ib) ? ib : int.MaxValue;
+                return idxA.CompareTo(idxB);
+            });
+        }
         return list;
     }
 
     private static int DefaultComparison(RepoItemViewModel a, RepoItemViewModel b)
     {
-        if (a.IsPinned != b.IsPinned) return a.IsPinned ? -1 : 1;
         return StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
     }
 }

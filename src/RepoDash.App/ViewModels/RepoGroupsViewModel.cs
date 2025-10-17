@@ -114,6 +114,14 @@ public partial class RepoGroupsViewModel : ObservableObject
     public void SetFrequentItems(IEnumerable<RepoItemViewModel> items, bool isVisible)
         => SetSpecialGroup(FrequentKey, "Frequently Used", items, isVisible, sortOrder: 1, FrequentComparison);
 
+    public void RefreshPinningSettings()
+    {
+        foreach (var kv in _groupsByKey)
+        {
+            kv.Value.AllowPinning = GetPinningSettingForGroup(kv.Key);
+        }
+    }
+
     private void SetSpecialGroup(
         string key,
         string displayName,
@@ -135,6 +143,7 @@ public partial class RepoGroupsViewModel : ObservableObject
         }
 
         var group = EnsureSpecialGroup(key, displayName, sortOrder, comparison);
+        group.AllowPinning = GetPinningSettingForGroup(key);
         group.SetItems(materialized);
         group.ApplyFilter(_currentFilter);
         ReorderGroups();
@@ -151,6 +160,7 @@ public partial class RepoGroupsViewModel : ObservableObject
             existing.SortOrder = 10;
             existing.IsSpecial = false;
             existing.ExcludeBlacklisted = false;
+            existing.AllowPinning = Settings.PinningAppliesToAutomaticGroupings;
             return existing;
         }
 
@@ -160,7 +170,8 @@ public partial class RepoGroupsViewModel : ObservableObject
             GroupKey = groupKey,
             SortOrder = 10,
             IsSpecial = false,
-            ExcludeBlacklisted = false
+            ExcludeBlacklisted = false,
+            AllowPinning = Settings.PinningAppliesToAutomaticGroupings
         };
 
         _groupsByKey[groupKey] = group;
@@ -180,6 +191,7 @@ public partial class RepoGroupsViewModel : ObservableObject
             existing.IsSpecial = true;
             existing.ExcludeBlacklisted = true;
             existing.SortComparison = comparison;
+            existing.AllowPinning = GetPinningSettingForGroup(key);
             return existing;
         }
 
@@ -190,7 +202,8 @@ public partial class RepoGroupsViewModel : ObservableObject
             SortOrder = sortOrder,
             IsSpecial = true,
             ExcludeBlacklisted = true,
-            SortComparison = comparison
+            SortComparison = comparison,
+            AllowPinning = GetPinningSettingForGroup(key)
         };
 
         _groupsByKey[key] = group;
@@ -216,8 +229,6 @@ public partial class RepoGroupsViewModel : ObservableObject
     {
         if (a.IsBlacklisted != b.IsBlacklisted)
             return a.IsBlacklisted ? 1 : -1;
-        if (a.IsPinned != b.IsPinned)
-            return a.IsPinned ? -1 : 1;
 
         var aTime = a.LastUsedUtc ?? DateTimeOffset.MinValue;
         var bTime = b.LastUsedUtc ?? DateTimeOffset.MinValue;
@@ -231,8 +242,6 @@ public partial class RepoGroupsViewModel : ObservableObject
     {
         if (a.IsBlacklisted != b.IsBlacklisted)
             return a.IsBlacklisted ? 1 : -1;
-        if (a.IsPinned != b.IsPinned)
-            return a.IsPinned ? -1 : 1;
 
         var usageCompare = b.UsageCount.CompareTo(a.UsageCount);
         if (usageCompare != 0) return usageCompare;
@@ -244,4 +253,13 @@ public partial class RepoGroupsViewModel : ObservableObject
 
         return StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
     };
+
+    private bool GetPinningSettingForGroup(string key)
+    {
+        if (string.Equals(key, RecentKey, StringComparison.OrdinalIgnoreCase))
+            return Settings.PinningAppliesToRecent;
+        if (string.Equals(key, FrequentKey, StringComparison.OrdinalIgnoreCase))
+            return Settings.PinningAppliesToFrequent;
+        return Settings.PinningAppliesToAutomaticGroupings;
+    }
 }

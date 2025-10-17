@@ -287,6 +287,7 @@ public partial class MainViewModel : ObservableObject
         var showFrequent = Settings.ShowFrequent && frequentLimit > 0;
         RepoGroups.SetFrequentItems(frequentItems, showFrequent);
 
+        RepoGroups.RefreshPinningSettings();
         RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
     }
 

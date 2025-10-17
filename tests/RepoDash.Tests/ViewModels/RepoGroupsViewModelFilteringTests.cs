@@ -1,4 +1,9 @@
-﻿using Moq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using Moq;
 using NUnit.Framework;
 using RepoDash.App.Abstractions;
 using RepoDash.App.ViewModels;
@@ -23,18 +28,17 @@ public sealed class RepoGroupsViewModelFilteringTests
 
         var groups = new Dictionary<string, List<RepoItemViewModel>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["apps"] = layout.Apps.Select(MakeRepoItem).ToList(),
-            ["services"] = layout.Services.Select(MakeRepoItem).ToList(),
-            ["components"] = layout.Components.Select(MakeRepoItem).ToList(),
-            ["sql"] = layout.Sql.Select(MakeRepoItem).ToList(),
-            ["utilities"] = layout.Utilities.Select(MakeRepoItem).ToList(),
-            ["contracts"] = layout.Contracts.Select(MakeRepoItem).ToList(),
-            ["it"] = layout.IntegrationTests.Select(MakeRepoItem).ToList(),
+            ["apps"] = layout.Apps.Select(path => MakeRepoItem(path)).ToList(),
+            ["services"] = layout.Services.Select(path => MakeRepoItem(path)).ToList(),
+            ["components"] = layout.Components.Select(path => MakeRepoItem(path)).ToList(),
+            ["sql"] = layout.Sql.Select(path => MakeRepoItem(path)).ToList(),
+            ["utilities"] = layout.Utilities.Select(path => MakeRepoItem(path)).ToList(),
+            ["contracts"] = layout.Contracts.Select(path => MakeRepoItem(path)).ToList(),
+            ["it"] = layout.IntegrationTests.Select(path => MakeRepoItem(path)).ToList(),
         };
 
         vm.Load(groups);
 
-        // Apply a term that appears in names and paths for many repos
         var term = "service";
         vm.ApplyFilter(term);
 
@@ -64,18 +68,17 @@ public sealed class RepoGroupsViewModelFilteringTests
 
         var groups = new Dictionary<string, List<RepoItemViewModel>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["apps"] = layout.Apps.Select(MakeRepoItem).ToList(),
-            ["services"] = layout.Services.Select(MakeRepoItem).ToList(),
-            ["components"] = layout.Components.Select(MakeRepoItem).ToList(),
-            ["sql"] = layout.Sql.Select(MakeRepoItem).ToList(),
-            ["utilities"] = layout.Utilities.Select(MakeRepoItem).ToList(),
-            ["contracts"] = layout.Contracts.Select(MakeRepoItem).ToList(),
-            ["it"] = layout.IntegrationTests.Select(MakeRepoItem).ToList(),
+            ["apps"] = layout.Apps.Select(path => MakeRepoItem(path)).ToList(),
+            ["services"] = layout.Services.Select(path => MakeRepoItem(path)).ToList(),
+            ["components"] = layout.Components.Select(path => MakeRepoItem(path)).ToList(),
+            ["sql"] = layout.Sql.Select(path => MakeRepoItem(path)).ToList(),
+            ["utilities"] = layout.Utilities.Select(path => MakeRepoItem(path)).ToList(),
+            ["contracts"] = layout.Contracts.Select(path => MakeRepoItem(path)).ToList(),
+            ["it"] = layout.IntegrationTests.Select(path => MakeRepoItem(path)).ToList(),
         };
 
         vm.Load(groups);
 
-        // Baseline (empty filter) should include all, sorted by Name
         vm.ApplyFilter(string.Empty);
         foreach (var g in vm.Groups)
         {
@@ -87,7 +90,6 @@ public sealed class RepoGroupsViewModelFilteringTests
             Assert.That(actualAll, Is.EqualTo(expectedAll), $"Group '{g.GroupKey}' baseline mismatch.");
         }
 
-        // Apply a specific term
         var term = "portal";
         vm.ApplyFilter(term);
         foreach (var g in vm.Groups)
@@ -103,7 +105,6 @@ public sealed class RepoGroupsViewModelFilteringTests
             Assert.That(actualFiltered, Is.EqualTo(expectedFiltered), $"Group '{g.GroupKey}' filtered mismatch.");
         }
 
-        // Clear again — should restore baseline
         vm.ApplyFilter(string.Empty);
         foreach (var g in vm.Groups)
         {
@@ -116,30 +117,197 @@ public sealed class RepoGroupsViewModelFilteringTests
         }
     }
 
-    // ----- helpers --------------------------------------------------------
-
-    private static RepoGroupsViewModel MakeGroupsVm()
+    [Test]
+    public void AutomaticGroupsRespectPinSetting()
     {
+        var general = new GeneralSettings { PinningAppliesToAutomaticGroupings = false };
+        var vm = MakeGroupsVm(general);
+
+        var pinned = MakeRepoItem(@"C:\dev\repo-pinned", pinned: true);
+        pinned.Name = "Pinned";
+        var regular = MakeRepoItem(@"C:\dev\repo-regular");
+        regular.Name = "Regular";
+
+        vm.Load(new Dictionary<string, List<RepoItemViewModel>>
+        {
+            ["apps"] = new() { regular, pinned }
+        });
+
+        var group = vm.Groups.Single(g => string.Equals(g.InternalKey, "apps", StringComparison.OrdinalIgnoreCase));
+        Assert.That(group.AllowPinning, Is.False);
+        Assert.That(group.Items.Select(i => i.Name), Is.EqualTo(new[] { "Regular", "Pinned" }));
+
+        general.PinningAppliesToAutomaticGroupings = true;
+        vm.RefreshPinningSettings();
+
+        Assert.That(group.AllowPinning, Is.True);
+        Assert.That(group.Items.Select(i => i.Name), Is.EqualTo(new[] { "Pinned", "Regular" }));
+    }
+
+    [Test]
+    public void ChangingPinningApplicability_DoesNotClearPinState()
+    {
+        var store = new InMemoryUsageStore();
+        var usage = new RepoUsageService(store);
+        var general = new GeneralSettings { PinningAppliesToAutomaticGroupings = true };
+
+        var repoItem = MakeRepoItem(@"C:\dev\apps\RepoA", usageOverride: usage);
+        repoItem.TogglePinCommand.Execute(null);
+        SpinWait.SpinUntil(() => store.WriteCount > 0, TimeSpan.FromSeconds(1));
+        Assert.That(repoItem.IsPinned, Is.True, "Sanity: repo is pinned before settings change.");
+
+        var vm = MakeGroupsVm(general);
+        vm.Load(new Dictionary<string, List<RepoItemViewModel>> { ["apps"] = new() { repoItem } });
+        Assert.That(repoItem.IsPinned, Is.True, "Load should not alter pin state.");
+
+        general.PinningAppliesToAutomaticGroupings = false;
+        vm.RefreshPinningSettings();
+
+        Assert.That(repoItem.IsPinned, Is.True, "Changing pin visibility must not clear pin state.");
+        Assert.That(store.GetPinnedPaths(), Contains.Item(Path.GetFullPath(repoItem.Path)));
+    }
+
+    
+
+[Test]
+    public void PinnedStatePersistsAcrossUsageServiceRestart()
+    {
+        var store = new InMemoryUsageStore();
+        var usage1 = new RepoUsageService(store);
+
+        var original = MakeRepoItem(@"C:\dev\apps\RepoB", usageOverride: usage1);
+        original.TogglePinCommand.Execute(null);
+        SpinWait.SpinUntil(() => store.WriteCount > 0, TimeSpan.FromSeconds(1));
+        Assert.That(original.IsPinned, Is.True, "Sanity: repo is pinned before restart.");
+
+        var usage2 = new RepoUsageService(store);
+        var rehydrated = MakeRepoItem(@"C:\dev\apps\RepoB", usageOverride: usage2);
+        rehydrated.RefreshUsageFlags();
+
+        Assert.That(rehydrated.IsPinned, Is.True, "Pinned state should survive usage-service restart.");
+    }
+
+    [Test]
+    public void RecentAndFrequentRespectPinSettings()
+    {
+        var general = new GeneralSettings
+        {
+            PinningAppliesToRecent = false,
+            PinningAppliesToFrequent = true
+        };
+        var vm = MakeGroupsVm(general);
+
+        var now = DateTimeOffset.UtcNow;
+        var recentPinned = MakeRepoItem(@"C:\dev\recent-pinned", pinned: true, usageCount: 10, lastUsed: now);
+        var recentOther = MakeRepoItem(@"C:\dev\recent-other", usageCount: 5, lastUsed: now.AddMinutes(-5));
+
+        vm.SetRecentItems(new[] { recentOther, recentPinned }, isVisible: true);
+        var recentGroup = vm.Groups.Single(g => string.Equals(g.InternalKey, "__special_recent", StringComparison.OrdinalIgnoreCase));
+        Assert.That(recentGroup.AllowPinning, Is.False);
+        Assert.That(recentPinned.IsPinned, Is.True);
+        Assert.That(recentGroup.Items.First().Path, Is.EqualTo(recentOther.Path));
+
+        var frequentPinned = MakeRepoItem(@"C:\dev\freq-pinned", pinned: true, usageCount: 20);
+        var frequentOther = MakeRepoItem(@"C:\dev\freq-other", usageCount: 5);
+
+        vm.SetFrequentItems(new[] { frequentOther, frequentPinned }, isVisible: true);
+        var frequentGroup = vm.Groups.Single(g => string.Equals(g.InternalKey, "__special_frequent", StringComparison.OrdinalIgnoreCase));
+        Assert.That(frequentGroup.AllowPinning, Is.True);
+        Assert.That(frequentGroup.Items.First().Path, Is.EqualTo(frequentPinned.Path));
+    }
+
+    private static RepoGroupsViewModel MakeGroupsVm(GeneralSettings? general = null)
+    {
+        general ??= new GeneralSettings();
         var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
-        settings.SetupGet(s => s.Current).Returns(new GeneralSettings());
+        settings.SetupGet(s => s.Current).Returns(general);
         return new RepoGroupsViewModel(settings.Object);
     }
 
-    private static RepoItemViewModel MakeRepoItem(string repoPath)
+    private static RepoItemViewModel MakeRepoItem(
+        string repoPath,
+        bool pinned = false,
+        bool blacklisted = false,
+        int usageCount = 0,
+        DateTimeOffset? lastUsed = null,
+        IRepoUsageService? usageOverride = null)
     {
         var launcher = new Mock<ILauncher>().Object;
         var git = new Mock<IGitService>().Object;
         var links = new Mock<IRemoteLinkProvider>().Object;
         var branch = new Mock<IBranchProvider>();
-        var usage = new Mock<IRepoUsageService>();
-        usage.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
-        usage.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
 
-        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage.Object)
+        IRepoUsageService usage;
+        if (usageOverride is not null)
+        {
+            usage = usageOverride;
+        }
+        else
+        {
+            var usageMock = new Mock<IRepoUsageService>();
+            var pinnedState = pinned;
+            var blacklistedState = blacklisted;
+
+            usageMock.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(() => pinnedState);
+            usageMock.Setup(u => u.TogglePinned(It.IsAny<string>(), It.IsAny<string>())).Returns(() =>
+            {
+                pinnedState = !pinnedState;
+                return pinnedState;
+            });
+            usageMock.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(() => blacklistedState);
+            usageMock.Setup(u => u.ToggleBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(() =>
+            {
+                blacklistedState = !blacklistedState;
+                return blacklistedState;
+            });
+
+            usage = usageMock.Object;
+        }
+
+        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage)
         {
             Name = Path.GetFileName(repoPath),
-            Path = repoPath
+            Path = repoPath,
+            HasGit = true
         };
+
+        vm.ApplyUsageMetrics(lastUsed, usageCount);
+        vm.RefreshUsageFlags();
         return vm;
+    }
+
+    private sealed class InMemoryUsageStore : IRepoUsageStore
+    {
+        private RepoUsageState _state = new();
+        private readonly HashSet<string> _pinned = new(StringComparer.OrdinalIgnoreCase);
+        private int _writeCount;
+
+        public Task<RepoUsageState> ReadAsync(CancellationToken ct) => Task.FromResult(Clone(_state));
+
+        public Task WriteAsync(RepoUsageState state, CancellationToken ct)
+        {
+            _state = Clone(state);
+            _pinned.Clear();
+            foreach (var path in state.PinnedPaths)
+                _pinned.Add(NormalizePath(path));
+            Interlocked.Increment(ref _writeCount);
+            return Task.CompletedTask;
+        }
+
+        public IEnumerable<string> GetPinnedPaths() => _pinned;
+
+        public int WriteCount => Volatile.Read(ref _writeCount);
+
+        private static RepoUsageState Clone(RepoUsageState source) => new()
+        {
+            Entries = source.Entries.Select(e => e with { }).ToList(),
+            PinnedPaths = new List<string>(source.PinnedPaths),
+            PinnedNames = new List<string>(source.PinnedNames),
+            BlacklistedPaths = new List<string>(source.BlacklistedPaths),
+            BlacklistedNames = new List<string>(source.BlacklistedNames),
+            BlacklistedItems = source.BlacklistedItems.Select(i => i with { }).ToList()
+        };
+
+        private static string NormalizePath(string path) => Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 }

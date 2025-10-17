@@ -41,26 +41,23 @@ public sealed class BlacklistedItemsViewModelTests
 
         using (var vm = new BlacklistedItemsViewModel(usage, dispatcher.Object))
         {
-            var repoVm = new RepoItemViewModel(
-                new Mock<ILauncher>().Object,
-                new Mock<IGitService>().Object,
-                new Mock<IRemoteLinkProvider>().Object,
-                new Mock<IBranchProvider>().Object,
-                usage) { Name = "Hidden", Path = "C:/dev/hidden", HasGit = true };
-
+            var repoVm = new RepoItemViewModel(new Mock<ILauncher>().Object, new Mock<IGitService>().Object, new Mock<IRemoteLinkProvider>().Object, new Mock<IBranchProvider>().Object, usage)
+            {
+                Name = "Hidden",
+                Path = "C:/dev/hidden",
+                HasGit = true
+            };
             repoVm.ToggleBlacklistCommand.Execute(null);
+            SpinWait.SpinUntil(() => store.WriteCount > 0, TimeSpan.FromSeconds(1));
 
             Assert.That(vm.Items, Has.Count.EqualTo(1), "Blacklisted item should be visible in the management UI.");
         }
 
-        SpinWait.SpinUntil(() => store.WriteCount > 0, TimeSpan.FromSeconds(1));
         var usageAfterRestart = new RepoUsageService(store);
 
         using var vmAfterRestart = new BlacklistedItemsViewModel(usageAfterRestart, dispatcher.Object);
 
-        Assert.That(
-            vmAfterRestart.Items,
-            Has.Count.EqualTo(1),
+        Assert.That(vmAfterRestart.Items, Has.Count.EqualTo(1),
             "Blacklisted item should be restored after restarting the usage service.");
     }
 
@@ -135,23 +132,15 @@ public sealed class BlacklistedItemsViewModelTests
         }
 
         public int WriteCount => Volatile.Read(ref _writeCount);
-        
-        private static RepoUsageState
-            Clone(RepoUsageState source) =>
-            new()
-            {
-                Entries = source
-                    .Entries
-                    .Select(e => e with { })
-                    .ToList(),
-                PinnedPaths = new List<string>(source.PinnedPaths),
-                PinnedNames = new List<string>(source.PinnedNames),
-                BlacklistedPaths = new List<string>(source.BlacklistedPaths),
-                BlacklistedNames = new List<string>(source.BlacklistedNames),
-                BlacklistedItems = source
-                    .BlacklistedItems
-                    .Select(i => i with { })
-                    .ToList()
-            };
+
+        private static RepoUsageState Clone(RepoUsageState source) => new()
+        {
+            Entries = source.Entries.Select(e => e with { }).ToList(),
+            PinnedPaths = new List<string>(source.PinnedPaths),
+            PinnedNames = new List<string>(source.PinnedNames),
+            BlacklistedPaths = new List<string>(source.BlacklistedPaths),
+            BlacklistedNames = new List<string>(source.BlacklistedNames),
+            BlacklistedItems = source.BlacklistedItems.Select(i => i with { }).ToList()
+        };
     }
 }
