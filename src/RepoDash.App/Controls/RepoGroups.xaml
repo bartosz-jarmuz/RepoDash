@@ -26,8 +26,7 @@
 
       <ItemsControl.ItemContainerStyle>
         <Style TargetType="ContentPresenter">
-          <Setter Property="Width" Value="{Binding DataContext.Settings.GroupPanelWidth,
-                  RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+          <Setter Property="Width" Value="{Binding Settings.GroupPanelWidth}"/>
           <Setter Property="Margin" Value="10"/>
         </Style>
       </ItemsControl.ItemContainerStyle>
