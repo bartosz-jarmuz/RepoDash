@@ -4,6 +4,7 @@
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:RepoDash.App.Converters"
         mc:Ignorable="d"
         Title="{Binding Title}" Width="820" Height="860"
         WindowStartupLocation="CenterOwner">
@@ -15,8 +16,47 @@
 
     <!-- Runtime binds to VM.Model; for design-time, we show GeneralSettings properties -->
     <xctk:PropertyGrid SelectedObject="{Binding Model}"
-                       d:SelectedObject="{Binding}"
-                       AutoGenerateProperties="True"
-                       IsCategorized="True"/>
+                   d:SelectedObject="{Binding}"
+                   AutoGenerateProperties="True"
+                   IsCategorized="True">
+      <xctk:PropertyGrid.Resources>
+        <converters:HexStringToColorConverter x:Key="HexStringToColorConverter"/>
+      </xctk:PropertyGrid.Resources>
+
+      <xctk:PropertyGrid.EditorDefinitions>
+
+        <!-- Color editor for ColorSettings.RecentGroupColor -->
+        <xctk:EditorTemplateDefinition TargetProperties="RecentGroupColor">
+          <xctk:EditorTemplateDefinition.EditingTemplate>
+            <DataTemplate>
+              <xctk:ColorPicker SelectedColor="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource HexStringToColorConverter}}"
+                            
+                            UsingAlphaChannel="True"/>
+            </DataTemplate>
+          </xctk:EditorTemplateDefinition.EditingTemplate>
+        </xctk:EditorTemplateDefinition>
+
+        <!-- Color editor for ColorSettings.FrequentGroupColor -->
+        <xctk:EditorTemplateDefinition TargetProperties="FrequentGroupColor">
+          <xctk:EditorTemplateDefinition.EditingTemplate>
+            <DataTemplate>
+              <xctk:ColorPicker SelectedColor="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource HexStringToColorConverter}}"
+                            UsingAlphaChannel="True"/>
+            </DataTemplate>
+          </xctk:EditorTemplateDefinition.EditingTemplate>
+        </xctk:EditorTemplateDefinition>
+
+        <!-- Color editor for GroupColorOverride.ColorCode -->
+        <xctk:EditorTemplateDefinition TargetProperties="ColorCode">
+          <xctk:EditorTemplateDefinition.EditingTemplate>
+            <DataTemplate>
+              <xctk:ColorPicker SelectedColor="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource HexStringToColorConverter}}"
+                            UsingAlphaChannel="True"/>
+            </DataTemplate>
+          </xctk:EditorTemplateDefinition.EditingTemplate>
+        </xctk:EditorTemplateDefinition>
+
+      </xctk:PropertyGrid.EditorDefinitions>
+    </xctk:PropertyGrid>
   </DockPanel>
 </Window>

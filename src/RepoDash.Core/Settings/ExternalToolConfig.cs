@@ -13,7 +13,7 @@ public sealed class ExternalToolConfig
     public string ScriptPath { get; set; } = string.Empty;
 
     [DisplayName("Button Color")]
-    public Color ButtonColor { get; set; } = Color.LightGray;
+    public System.Drawing.Color ButtonColor { get; set; } = System.Drawing.Color.LightGray;
 
     [DisplayName("Arguments (supports tokens)")]
     [Description("Use $(SolutionName), $(SolutionPath), $(FolderName). Separate by space as usual.")]

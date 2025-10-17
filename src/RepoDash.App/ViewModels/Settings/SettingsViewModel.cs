@@ -24,7 +24,8 @@ namespace RepoDash.App.ViewModels.Settings
         [RelayCommand]
         private async Task SaveAsync()
         {
-            await _store.UpdateAsync();  
+            await _store.UpdateAsync();
+            Services.SettingsChangeNotifier.Default.Bump();
             RequestClose?.Invoke();      
         }
 

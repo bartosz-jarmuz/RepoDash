@@ -1,11 +1,11 @@
-﻿using System;
-using System.Windows;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.Abstractions;
 using RepoDash.App.ViewModels;
 using RepoDash.App.ViewModels.Settings;
 using RepoDash.App.Views.Settings;
 using RepoDash.Core.Settings;
+using System;
+using System.Windows;
 
 namespace RepoDash.App.Services;
 
