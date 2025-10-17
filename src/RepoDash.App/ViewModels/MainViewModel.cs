@@ -113,8 +113,12 @@ public partial class MainViewModel : ObservableObject
     {
         get
         {
+            var debugIndicator = "";
+#if DEBUG
+            debugIndicator = " - DEBUG";
+#endif
             var path = Settings.RepoRoot;
-            return string.IsNullOrWhiteSpace(path) ? "RepoDash" : $"RepoDash - {path}";
+            return string.IsNullOrWhiteSpace(path) ? "RepoDash"+debugIndicator : $"RepoDash{debugIndicator} - {path}";
         }
     }
 

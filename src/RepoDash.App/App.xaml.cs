@@ -31,7 +31,11 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        _singleInstance = new SingleInstanceService("App", ActivateMainWindowSafe);
+        var debugIndicator = "";
+#if DEBUG
+        debugIndicator = "DEBUG";
+#endif
+        _singleInstance = new SingleInstanceService("App"+ debugIndicator, ActivateMainWindowSafe);
         if (!_singleInstance.TryAcquirePrimary())
         {
             _singleInstance.SignalActivateExisting();
