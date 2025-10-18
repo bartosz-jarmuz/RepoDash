@@ -7,16 +7,15 @@ using System.Windows.Data;
 using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.ViewModels;
-using RepoDash.Core.Color;
-using RepoDash.Core.Settings;
 using RepoDash.Core.Abstractions;
+using RepoDash.Core.Settings;
 
 public sealed class GroupHeaderBackgroundConverter : IMultiValueConverter
 {
     public object? Convert(object[] values, Type targetType, object? parameter, CultureInfo culture)
     {
         // values[0] = RepoGroupViewModel
-        // values[1] = SettingsChangeNotifier.Version (int) — unused, only to trigger re-eval
+        // values[1] = SettingsChangeNotifier.Version (int) — only to trigger re-eval after Save
         if (values.Length == 0 || values[0] is not RepoGroupViewModel vm)
             return Brushes.Transparent;
 
@@ -42,6 +41,7 @@ public sealed class GroupHeaderBackgroundConverter : IMultiValueConverter
 
         var displayName = vm.GroupKey ?? string.Empty;
 
+        // Per-group override
         var overrideHex = cfg.GroupColorOverrides
             .FirstOrDefault(o => string.Equals(o.GroupName, displayName, StringComparison.OrdinalIgnoreCase))
             ?.ColorCode;
@@ -49,12 +49,16 @@ public sealed class GroupHeaderBackgroundConverter : IMultiValueConverter
         if (!string.IsNullOrWhiteSpace(overrideHex))
             return ToBrush(overrideHex!);
 
-        var argb = PastelColorGenerator.FromString(displayName);
+        // Fallback to DI-provided colorizer
+        var colorizer = sp.GetRequiredService<IColorizer>();
+        var argb = colorizer.GetBackgroundColorFor(displayName);
+        if (argb is null) return Brushes.Transparent;
+
         return new SolidColorBrush(Color.FromArgb(
-            (byte)((argb >> 24) & 0xFF),
-            (byte)((argb >> 16) & 0xFF),
-            (byte)((argb >> 8) & 0xFF),
-            (byte)(argb & 0xFF)));
+            (byte)((argb.Value >> 24) & 0xFF),
+            (byte)((argb.Value >> 16) & 0xFF),
+            (byte)((argb.Value >> 8) & 0xFF),
+            (byte)(argb.Value & 0xFF)));
     }
 
     public object[] ConvertBack(object value, Type[] targetTypes, object? parameter, CultureInfo culture)

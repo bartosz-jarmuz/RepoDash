@@ -66,3 +66,4 @@ public sealed class RepoSignatureCalculatorTests
         Assert.That(s2, Is.EqualTo(s1));
     }
 }
+

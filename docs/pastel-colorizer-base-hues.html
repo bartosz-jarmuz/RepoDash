@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>PastelColorizer Base Palette</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            margin: 2rem;
+            background: #f8f8f8;
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 940px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+            background: #fff;
+        }
+        th, td {
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #fafafa;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .swatch {
+            width: 90px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .swatch-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        caption {
+            text-align: left;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+        code {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>PastelColorizer Base Palette</h1>
+    <p>
+        These are the 12 curated base colors (lightened by +3% lightness) used by <code>PastelColorizer</code> before per-string jitter is applied.
+        The three variant columns illustrate darker/muted, softer pastel, and brighter/vivid outcomes produced with the new +/-14 degree hue and +/-18% saturation/lightness jitter.
+    </p>
+    <table>
+        <caption>Base colors with representative jitter variants</caption>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Hue (deg)</th>
+                <th>Base</th>
+                <th>Variant Dark</th>
+                <th>Variant Soft</th>
+                <th>Variant Bright</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0</td>
+                <td>Crimson</td>
+                <td>352.20</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#DB3248;"></div><code>#DB3248</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#862A4C;"></div><code>#862A4C</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#DB8D97;"></div><code>#DB8D97</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#F68072;"></div><code>#F68072</code></div></td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Vermilion</td>
+                <td>24.58</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#F97C25;"></div><code>#F97C25</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#AC3116;"></div><code>#AC3116</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#F0B48A;"></div><code>#F0B48A</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#FFD07B;"></div><code>#FFD07B</code></div></td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Amber</td>
+                <td>42.00</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#F7C247;"></div><code>#F7C247</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#C36B1E;"></div><code>#C36B1E</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#F2DBA8;"></div><code>#F2DBA8</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#FFF89A;"></div><code>#FFF89A</code></div></td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Chartreuse</td>
+                <td>76.72</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#A7C755;"></div><code>#A7C755</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#7C7F41;"></div><code>#7C7F41</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#C5D1A6;"></div><code>#C5D1A6</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#BAEA8D;"></div><code>#BAEA8D</code></div></td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Forest</td>
+                <td>153.44</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#327557;"></div><code>#327557</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#1D2E22;"></div><code>#1D2E22</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#659D84;"></div><code>#659D84</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#37CBAC;"></div><code>#37CBAC</code></div></td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>Seafoam</td>
+                <td>187.08</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#3AE8FF;"></div><code>#3AE8FF</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#14CAB5;"></div><code>#14CAB5</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#A0EBF6;"></div><code>#A0EBF6</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#96DAFF;"></div><code>#96DAFF</code></div></td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>Cerulean</td>
+                <td>199.90</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#2AACED;"></div><code>#2AACED</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#1F909C;"></div><code>#1F909C</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#8BC9E8;"></div><code>#8BC9E8</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#74B1FF;"></div><code>#74B1FF</code></div></td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>Cobalt</td>
+                <td>216.00</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#275BA8;"></div><code>#275BA8</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#204153;"></div><code>#204153</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#678CC4;"></div><code>#678CC4</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#415DEA;"></div><code>#415DEA</code></div></td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td>Royal Purple</td>
+                <td>262.41</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#7538DB;"></div><code>#7538DB</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#3A2C8B;"></div><code>#3A2C8B</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#AE93DC;"></div><code>#AE93DC</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#C579F6;"></div><code>#C579F6</code></div></td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td>Magenta</td>
+                <td>330.18</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#D9408C;"></div><code>#D9408C</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#8C3173;"></div><code>#8C3173</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#DC99BA;"></div><code>#DC99BA</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#F4809E;"></div><code>#F4809E</code></div></td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td>Copper</td>
+                <td>22.62</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#C07141;"></div><code>#C07141</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#6E4038;"></div><code>#6E4038</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#C9A894;"></div><code>#C9A894</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#E6BB78;"></div><code>#E6BB78</code></div></td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td>Silver</td>
+                <td>240.00</td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#B8B8BF;"></div><code>#B8B8BF</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#8E8E8E;"></div><code>#8E8E8E</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#EAEAEA;"></div><code>#EAEAEA</code></div></td>
+                <td><div class="swatch-block"><div class="swatch" style="background:#E7E5EF;"></div><code>#E7E5EF</code></div></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

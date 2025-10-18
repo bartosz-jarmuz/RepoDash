@@ -4,5 +4,6 @@ namespace RepoDash.Core.NullObjects;
 
 public sealed class NullColorizer : IColorizer
 {
-    public uint? GetColorFor(string key) => null;
+    public uint? GetBackgroundColorFor(string key) => null;
+    public uint? GetForegroundColorFor(string key) => null;
 }

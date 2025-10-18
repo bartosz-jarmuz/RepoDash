@@ -17,6 +17,7 @@ using System.IO;
 using System.Windows;
 using RepoDash.App.Windowing;
 using RepoDash.Core.Caching;
+using RepoDash.Core.Color;
 using Application = System.Windows.Application;
 using JsonRepoCacheStore = RepoDash.Persistence.FileStores.JsonRepoCacheStore;
 
@@ -51,7 +52,7 @@ public partial class App : Application
 
         sc.AddSingleton<IGitService, LibGit2SharpGitService>();
         sc.AddSingleton<IBranchProvider, LightweightBranchProvider>();
-        sc.AddSingleton<IColorizer, NullColorizer>();
+        sc.AddSingleton<IColorizer, PastelColorizer>();
         sc.AddSingleton<IRemoteLinkProvider, GitRemoteLinkProvider>();
         sc.AddSingleton<ILauncher, Launcher>();
         sc.AddSingleton<IRepoScanner, FileSystemRepoScanner>();

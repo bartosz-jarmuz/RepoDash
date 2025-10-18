@@ -2,5 +2,6 @@ namespace RepoDash.Core.Abstractions;
 
 public interface IColorizer
 {
-    uint? GetColorFor(string key);
+    uint? GetBackgroundColorFor(string key);
+    uint? GetForegroundColorFor(string key);
 }

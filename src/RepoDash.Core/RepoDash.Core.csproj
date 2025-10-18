@@ -5,4 +5,7 @@
     <Nullable>enable</Nullable>
     <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="RepoDash.Tests" />
+  </ItemGroup>
 </Project>
