@@ -57,7 +57,7 @@
           <Run Text="{Binding Name}" FontWeight="SemiBold"/>
         </TextBlock>
 
-        <TextBlock FontSize="10" Margin="0,2,0,0"  >
+        <TextBlock FontSize="10" Margin="0,2,0,0" FontWeight="SemiBold" >
           <TextBlock.Style>
             <Style TargetType="TextBlock">
               <Setter Property="Foreground" Value="{StaticResource BrushTextSubtle}"/>

@@ -1,10 +1,16 @@
-﻿using LibGit2Sharp;
+﻿using System.Collections.Concurrent;
+using System.IO;
+using LibGit2Sharp;
 using RepoDash.Core.Abstractions;
 
 namespace RepoDash.Infrastructure.Git;
 
 public sealed class LibGit2SharpGitService : IGitService
 {
+    private static readonly ConcurrentDictionary<string, DateTimeOffset> _lastTrackingFetch =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan TrackingRefreshInterval = TimeSpan.FromMinutes(1);
+
     public Task<bool> IsGitRepoAsync(string repoPath, CancellationToken ct)
         => Task.FromResult(Repository.IsValid(repoPath));
 
@@ -34,6 +40,8 @@ public sealed class LibGit2SharpGitService : IGitService
         var head = repo.Head;
         var branch = head?.FriendlyName ?? "(detached)";
         var dirty = repo.RetrieveStatus().IsDirty;
+        RefreshTrackedBranchIfNeeded(repo, head, repoPath, ct);
+        head = repo.Head;
         var ahead = head?.TrackingDetails?.AheadBy ?? 0;
         var behind = head?.TrackingDetails?.BehindBy ?? 0;
 
@@ -72,5 +80,35 @@ public sealed class LibGit2SharpGitService : IGitService
         using var repo = new Repository(repoPath);
         Commands.Checkout(repo, branchName);
         return Task.CompletedTask;
+    }
+
+    private static void RefreshTrackedBranchIfNeeded(Repository repo, Branch? head, string repoPath, CancellationToken ct)
+    {
+        if (head?.IsTracking != true) return;
+        if (ct.IsCancellationRequested) return;
+
+        var repoKey = repo.Info.WorkingDirectory ?? Path.GetFullPath(repoPath);
+        var now = DateTimeOffset.UtcNow;
+        if (_lastTrackingFetch.TryGetValue(repoKey, out var lastFetch) &&
+            now - lastFetch < TrackingRefreshInterval)
+        {
+            return;
+        }
+
+        var remoteName = head.RemoteName;
+        if (string.IsNullOrWhiteSpace(remoteName)) return;
+
+        var remote = repo.Network.Remotes[remoteName];
+        if (remote is null) return;
+
+        try
+        {
+            Commands.Fetch(repo, remote.Name, Array.Empty<string>(), null, null);
+            _lastTrackingFetch[repoKey] = now;
+        }
+        catch
+        {
+            _lastTrackingFetch.TryRemove(repoKey, out _);
+        }
     }
 }
