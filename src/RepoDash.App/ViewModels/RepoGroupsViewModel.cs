@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using RepoDash.App.Abstractions;
+using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -10,12 +11,19 @@ public partial class RepoGroupsViewModel : ObservableObject
     private const string RecentKey = "__special_recent";
     private const string FrequentKey = "__special_frequent";
     private readonly IReadOnlySettingsSource<GeneralSettings> _settings;
+    private readonly ISettingsStore<GeneralSettings> _generalSettingsStore;
+    private readonly ISettingsStore<ColorSettings> _colorSettingsStore;
     private readonly Dictionary<string, RepoGroupViewModel> _groupsByKey = new(StringComparer.OrdinalIgnoreCase);
     private string _currentFilter = string.Empty;
 
-    public RepoGroupsViewModel(IReadOnlySettingsSource<GeneralSettings> settings)
+    public RepoGroupsViewModel(
+        IReadOnlySettingsSource<GeneralSettings> settings,
+        ISettingsStore<GeneralSettings> generalSettingsStore,
+        ISettingsStore<ColorSettings> colorSettingsStore)
     {
         _settings = settings;
+        _generalSettingsStore = generalSettingsStore;
+        _colorSettingsStore = colorSettingsStore;
         _settings.PropertyChanged += (_, __) => OnPropertyChanged(nameof(Settings));
         Groups = new ObservableCollection<RepoGroupViewModel>();
     }
@@ -156,6 +164,7 @@ public partial class RepoGroupsViewModel : ObservableObject
             if (!Groups.Contains(existing))
                 Groups.Add(existing);
 
+            existing.InternalKey = groupKey;
             existing.GroupKey = groupKey;
             existing.SortOrder = 10;
             existing.IsSpecial = false;
@@ -164,7 +173,7 @@ public partial class RepoGroupsViewModel : ObservableObject
             return existing;
         }
 
-        var group = new RepoGroupViewModel(_settings)
+        var group = new RepoGroupViewModel(_settings, _generalSettingsStore, _colorSettingsStore)
         {
             InternalKey = groupKey,
             GroupKey = groupKey,
@@ -186,6 +195,7 @@ public partial class RepoGroupsViewModel : ObservableObject
             if (!Groups.Contains(existing))
                 Groups.Add(existing);
 
+            existing.InternalKey = key;
             existing.GroupKey = displayName;
             existing.SortOrder = sortOrder;
             existing.IsSpecial = true;
@@ -195,7 +205,7 @@ public partial class RepoGroupsViewModel : ObservableObject
             return existing;
         }
 
-        var group = new RepoGroupViewModel(_settings)
+        var group = new RepoGroupViewModel(_settings, _generalSettingsStore, _colorSettingsStore)
         {
             InternalKey = key,
             GroupKey = displayName,

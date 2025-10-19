@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
 using RepoDash.App.Abstractions;
@@ -221,7 +222,21 @@ public sealed class RepoGroupsViewModelFilteringTests
         general ??= new GeneralSettings();
         var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
         settings.SetupGet(s => s.Current).Returns(general);
-        return new RepoGroupsViewModel(settings.Object);
+
+        var generalStore = new Mock<ISettingsStore<GeneralSettings>>();
+        generalStore.SetupGet(s => s.Current).Returns(general);
+        generalStore
+            .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var colorSettings = new ColorSettings();
+        var colorStore = new Mock<ISettingsStore<ColorSettings>>();
+        colorStore.SetupGet(s => s.Current).Returns(colorSettings);
+        colorStore
+            .Setup(s => s.UpdateAsync(It.IsAny<Action<ColorSettings>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        return new RepoGroupsViewModel(settings.Object, generalStore.Object, colorStore.Object);
     }
 
     private static RepoItemViewModel MakeRepoItem(

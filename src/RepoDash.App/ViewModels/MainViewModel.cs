@@ -15,6 +15,8 @@ namespace RepoDash.App.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
+    private readonly ISettingsStore<GeneralSettings> _generalSettingsStore;
+    private readonly ISettingsStore<ColorSettings> _colorSettingsStore;
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
     private readonly IBranchProvider _branchProvider;
@@ -33,6 +35,8 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         IReadOnlySettingsSource<GeneralSettings> generalSettings,
+        ISettingsStore<GeneralSettings> generalSettingsStore,
+        ISettingsStore<ColorSettings> colorSettingsStore,
         ILauncher launcher,
         IGitService git,
         IBranchProvider branchProvider,
@@ -42,6 +46,8 @@ public partial class MainViewModel : ObservableObject
         IRepoUsageService usage)
     {
         _generalSettings = generalSettings;
+        _generalSettingsStore = generalSettingsStore;
+        _colorSettingsStore = colorSettingsStore;
         _launcher = launcher;
         _git = git;
         _branchProvider = branchProvider;
@@ -53,7 +59,7 @@ public partial class MainViewModel : ObservableObject
         SearchBar = new SearchBarViewModel();
         RepoRoot = new RepoRootViewModel();
         SettingsMenu = settingsMenuVm;
-        RepoGroups = new RepoGroupsViewModel(_generalSettings);
+        RepoGroups = new RepoGroupsViewModel(_generalSettings, _generalSettingsStore, _colorSettingsStore);
         GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
         _usage.Changed += OnUsageChanged;
 

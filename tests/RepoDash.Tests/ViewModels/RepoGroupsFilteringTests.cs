@@ -5,6 +5,8 @@ using RepoDash.App.ViewModels;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
 using RepoDash.Tests.TestingUtilities;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RepoDash.Tests.ViewModels;
 
@@ -128,9 +130,27 @@ public sealed class RepoGroupsFilteringTests
 
     private static RepoGroupViewModel MakeGroupVm()
     {
+        var general = new GeneralSettings();
         var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
-        settings.SetupGet(s => s.Current).Returns(new GeneralSettings());
-        return new RepoGroupViewModel(settings.Object) { GroupKey = "all" };
+        settings.SetupGet(s => s.Current).Returns(general);
+
+        var generalStore = new Mock<ISettingsStore<GeneralSettings>>();
+        generalStore.SetupGet(s => s.Current).Returns(general);
+        generalStore
+            .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var colorSettings = new ColorSettings();
+        var colorStore = new Mock<ISettingsStore<ColorSettings>>();
+        colorStore.SetupGet(s => s.Current).Returns(colorSettings);
+        colorStore
+            .Setup(s => s.UpdateAsync(It.IsAny<Action<ColorSettings>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        return new RepoGroupViewModel(settings.Object, generalStore.Object, colorStore.Object)
+        {
+            GroupKey = "all"
+        };
     }
 
     private static RepoItemViewModel MakeRepoItem(string repoPath)

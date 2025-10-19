@@ -16,6 +16,7 @@
         <ResourceDictionary Source="/RepoDash.App;component/Themes/Styles.xaml"/>
       </ResourceDictionary.MergedDictionaries>
 
+      <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
       <!-- New: converters for group header -->
       <converters:GroupHeaderBackgroundConverter x:Key="GroupHeaderBackgroundConverter"/>
     </ResourceDictionary>
@@ -36,8 +37,44 @@
           </MultiBinding>
         </Border.Background>
 
-        <TextBlock Text="{Binding GroupKey}"
-                   FontWeight="Bold"/>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <TextBlock Text="{Binding GroupKey}"
+                     VerticalAlignment="Center"
+                     FontWeight="Bold"/>
+
+          <Button Grid.Column="1"
+                  Width="18"
+                  Height="17"
+                  Margin="4,0,0,0"
+                  Style="{StaticResource IconFlatButton}"
+                  Click="OptionsButton_Click"
+                  ToolTip="Group options"
+                  Focusable="False">
+            <Button.ContextMenu>
+              <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                <MenuItem Header="Change color..." Command="{Binding ChangeColorCommand}"/>
+                <MenuItem Header="Reset color" Command="{Binding ResetColorCommand}" IsEnabled="{Binding CanResetColor}"/>
+                <Separator Visibility="{Binding ShowVisibilityToggleOption, Converter={StaticResource BoolToVisibility}}"/>
+                <MenuItem Header="{Binding ToggleVisibilityLabel}"
+                          Command="{Binding ToggleVisibilityCommand}"
+                          Visibility="{Binding ShowVisibilityToggleOption, Converter={StaticResource BoolToVisibility}}"/>
+              </ContextMenu>
+            </Button.ContextMenu>
+            <Path Width="14"
+                  Height="14"
+                  Stretch="Uniform"
+                  Stroke="{StaticResource BrushTextMain}"
+                  StrokeThickness="1.5"
+                  StrokeStartLineCap="Round"
+                  StrokeEndLineCap="Round"
+                  Data="M1,4 H11 M1,7 H11 M1,10 H11"/>
+          </Button>
+        </Grid>
       </Border>
 
       <ListBox ItemsSource="{Binding Items}"

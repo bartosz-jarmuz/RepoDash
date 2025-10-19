@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
 using RepoDash.App.ViewModels;
@@ -112,6 +114,18 @@ namespace RepoDash.Tests
             generalSource.SetupGet(s => s.Current).Returns(general);
 
             var generalStore = new Mock<ISettingsStore<GeneralSettings>>();
+            generalStore.SetupGet(s => s.Current).Returns(general);
+            generalStore
+                .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var colorStore = new Mock<ISettingsStore<ColorSettings>>();
+            var colorSettings = new ColorSettings();
+            colorStore.SetupGet(s => s.Current).Returns(colorSettings);
+            colorStore
+                .Setup(s => s.UpdateAsync(It.IsAny<Action<ColorSettings>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
             var scanner = new Mock<IRepoScanner>();
             var launcher = new Mock<ILauncher>();
             var git = new Mock<IGitService>();
@@ -130,6 +144,8 @@ namespace RepoDash.Tests
 
             return new MainViewModel(
                 generalSource.Object,
+                generalStore.Object,
+                colorStore.Object,
                 launcher.Object,
                 git.Object,
                 branch.Object,
