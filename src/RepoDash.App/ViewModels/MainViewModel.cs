@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RepoDash.App.Abstractions;
+using RepoDash.App.Services;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Caching;
 using RepoDash.Core.Settings;
@@ -8,6 +9,8 @@ using RepoDash.Core.Usage;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Windows.Threading;
 
 namespace RepoDash.App.ViewModels;
@@ -23,6 +26,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IRemoteLinkProvider _links;
     private readonly RepoCacheService _cacheService;
     private readonly IRepoUsageService _usage;
+    private readonly GitOperationCoordinator _gitCoordinator;
     private readonly List<RepoItemViewModel> _detachedUsageItems = new();
 
     [ObservableProperty] private bool _focusSearchRequested;
@@ -32,6 +36,7 @@ public partial class MainViewModel : ObservableObject
     public SettingsMenuViewModel SettingsMenu { get; }
     public RepoGroupsViewModel RepoGroups { get; }
     public GlobalGitOperationsMenuViewModel GlobalGitOperations { get; }
+    public StatusBarViewModel StatusBar { get; }
 
     public MainViewModel(
         IReadOnlySettingsSource<GeneralSettings> generalSettings,
@@ -61,6 +66,8 @@ public partial class MainViewModel : ObservableObject
         SettingsMenu = settingsMenuVm;
         RepoGroups = new RepoGroupsViewModel(_generalSettings, _generalSettingsStore, _colorSettingsStore);
         GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
+        StatusBar = new StatusBarViewModel();
+        _gitCoordinator = new GitOperationCoordinator(_git, _launcher, StatusBar, Dispatch);
         _usage.Changed += OnUsageChanged;
 
         // Initial values
@@ -94,17 +101,13 @@ public partial class MainViewModel : ObservableObject
         GlobalGitOperations.ResolveGitRepos = () => RepoGroups.GetAllRepoItems();
         GlobalGitOperations.OnFetchAll = async repos =>
         {
-            await Task.WhenAll(repos.Select(r => _git.FetchAsync(r.Path, CancellationToken.None)));
-            await Task.WhenAll(repos.Select(r => r.RefreshStatusAsync(CancellationToken.None)));
+            await _gitCoordinator.FetchAllAsync(repos, CancellationToken.None).ConfigureAwait(false);
+            Dispatch(UpdateStatusSummary);
         };
         GlobalGitOperations.OnPullAll = async (repos, rebase) =>
         {
-            foreach (var r in repos)
-            {
-                try { await _git.PullAsync(r.Path, rebase, CancellationToken.None); }
-                catch { _launcher.OpenGitUi(r.Path); }
-                await r.RefreshStatusAsync(CancellationToken.None);
-            }
+            await _gitCoordinator.PullAllAsync(repos, rebase, CancellationToken.None).ConfigureAwait(false);
+            Dispatch(UpdateStatusSummary);
         };
 
         _generalSettings.PropertyChanged += (_, __) =>
@@ -158,39 +161,7 @@ public partial class MainViewModel : ObservableObject
             var cached = await _cacheService.LoadFromCacheAsync(root, ct).ConfigureAwait(false);
             Dispatch(() => ApplySnapshot(cached));
 
-            // Warm-up heavy git status in deterministic (alphabetical) order with limited parallelism
-            _ = Task.Run(async () =>
-            {
-                var items = RepoGroups
-                    .GetAllRepoItems()
-                    .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                if (items.Count == 0) return;
-
-                var gate = new System.Threading.SemaphoreSlim(4);
-                var tasks = items.Select(async vm =>
-                {
-                    await gate.WaitAsync(ct).ConfigureAwait(false);
-                    try
-                    {
-                        if (!ct.IsCancellationRequested)
-                            await vm.RefreshStatusAsync(ct).ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // best-effort per item
-                    }
-                    finally
-                    {
-                        try { gate.Release(); } catch { }
-                    }
-                }).ToList();
-
-                try { await Task.WhenAll(tasks).ConfigureAwait(false); } catch { }
-            }, ct);
-
-            // 2) Full refresh streaming into the UI
+            // Full refresh streaming into the UI
             await _cacheService.RefreshAsync(
                 root,
                 groupingSegment: _generalSettings.Current.GroupingSegment,
@@ -198,37 +169,19 @@ public partial class MainViewModel : ObservableObject
                 removeByRepoPath: p => Dispatch(() => RepoGroups.RemoveByRepoPath(p)),
                 ct).ConfigureAwait(false);
 
-            // Run a second warm-up pass after the list settles (same deterministic order)
-            _ = Task.Run(async () =>
+            if (!ct.IsCancellationRequested)
             {
-                var items = RepoGroups
+                var finalItems = RepoGroups
                     .GetAllRepoItems()
                     .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                if (items.Count == 0) return;
-
-                var gate = new System.Threading.SemaphoreSlim(4);
-                var tasks = items.Select(async vm =>
-                {
-                    await gate.WaitAsync(ct).ConfigureAwait(false);
-                    try
-                    {
-                        if (!ct.IsCancellationRequested)
-                            await vm.RefreshStatusAsync(ct).ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // best-effort per item
-                    }
-                    finally
-                    {
-                        try { gate.Release(); } catch { }
-                    }
-                }).ToList();
-
-                try { await Task.WhenAll(tasks).ConfigureAwait(false); } catch { }
-            }, ct);
+                await _gitCoordinator.RefreshStatusesAsync(
+                    finalItems,
+                    ct,
+                    description: "Refreshing repository statuses").ConfigureAwait(false);
+                UpdateStatusSummary();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -256,6 +209,7 @@ public partial class MainViewModel : ObservableObject
 
         RepoGroups.Load(itemsByGroup);
         RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+        UpdateStatusSummary();
         UpdateUsageGroups();
     }
 
@@ -263,7 +217,12 @@ public partial class MainViewModel : ObservableObject
     {
         var vm = MakeRepoItemVm(r);
         RepoGroups.Upsert(r.GroupKey, vm);
-        _ = Task.Run(() => vm.RefreshStatusAsync(CancellationToken.None));
+        _ = Task.Run(async () =>
+        {
+            var result = await vm.RefreshStatusAsync(CancellationToken.None).ConfigureAwait(false);
+            if (!result.Success && result.Error is null) return;
+            Dispatch(UpdateStatusSummary);
+        });
     }
 
     private RepoItemViewModel MakeRepoItemVm(CachedRepo r)
@@ -305,6 +264,38 @@ public partial class MainViewModel : ObservableObject
 
         RepoGroups.RefreshPinningSettings();
         RepoGroups.ApplyFilter(SearchBar.SearchText ?? string.Empty);
+        UpdateStatusSummary();
+    }
+
+    private void UpdateStatusSummary()
+    {
+        var repos = RepoGroups.GetAllRepoItems(gitOnly: true);
+        var total = repos.Count;
+        var upToDate = 0;
+        var behind = 0;
+        var ahead = 0;
+        var unknown = 0;
+
+        foreach (var repo in repos)
+        {
+            switch (repo.SyncState)
+            {
+                case BranchSyncState.UpToDate:
+                    upToDate++;
+                    break;
+                case BranchSyncState.Behind:
+                    behind++;
+                    break;
+                case BranchSyncState.Ahead:
+                    ahead++;
+                    break;
+                default:
+                    unknown++;
+                    break;
+            }
+        }
+
+        StatusBar.UpdateSummary(total, upToDate, behind, ahead, unknown);
     }
 
     private void DisposeDetachedUsageItems()

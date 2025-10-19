@@ -24,6 +24,8 @@
   <DockPanel>
     <!-- Top bar as a single control; it composes child controls -->
     <controls:TopBar DockPanel.Dock="Top" DataContext="{Binding}" Margin="10"/>
+    <!-- Status bar at the bottom -->
+    <controls:StatusBar DockPanel.Dock="Bottom" DataContext="{Binding StatusBar}" />
     <!-- Repo area -->
     <controls:RepoGroups DataContext="{Binding RepoGroups}"/>
   </DockPanel>

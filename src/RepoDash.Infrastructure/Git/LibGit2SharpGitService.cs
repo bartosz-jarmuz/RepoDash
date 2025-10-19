@@ -56,7 +56,7 @@ public sealed class LibGit2SharpGitService : IGitService
     public Task FetchAsync(string repoPath, CancellationToken ct)
     {
         using var repo = new Repository(repoPath);
-        Commands.Fetch(repo, "origin", Array.Empty<string>(), null, null);
+        Commands.Fetch(repo, "origin", Array.Empty<string>(), CreateFetchOptions(repoPath), null);
         return Task.CompletedTask;
     }
 
@@ -67,7 +67,7 @@ public sealed class LibGit2SharpGitService : IGitService
                   new Signature("RepoDash", "repodash@local", DateTimeOffset.Now);
         var options = new PullOptions
         {
-            FetchOptions = new FetchOptions(),
+            FetchOptions = CreateFetchOptions(repoPath),
             MergeOptions = rebase ? new MergeOptions { FastForwardStrategy = FastForwardStrategy.NoFastForward }
                                   : new MergeOptions()
         };
@@ -103,12 +103,30 @@ public sealed class LibGit2SharpGitService : IGitService
 
         try
         {
-            Commands.Fetch(repo, remote.Name, Array.Empty<string>(), null, null);
+            var workingDir = repo.Info.WorkingDirectory ?? repoPath;
+            Commands.Fetch(repo, remote.Name, Array.Empty<string>(), CreateFetchOptions(workingDir), null);
             _lastTrackingFetch[repoKey] = now;
         }
         catch
         {
             _lastTrackingFetch.TryRemove(repoKey, out _);
+            throw;
         }
     }
+
+    private static FetchOptions CreateFetchOptions(string repoPath)
+        => new()
+        {
+            CredentialsProvider = (url, usernameFromUrl, types) =>
+            {
+                if ((types & SupportedCredentialTypes.UsernamePassword) != 0)
+                {
+                    var credentials = GitCredentialHelper.TryGetCredentials(repoPath, url, usernameFromUrl);
+                    if (credentials is not null)
+                        return credentials;
+                }
+
+                return new DefaultCredentials();
+            }
+        };
 }

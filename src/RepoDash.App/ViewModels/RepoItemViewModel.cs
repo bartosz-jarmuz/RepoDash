@@ -89,13 +89,13 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task RefreshStatusAsync(CancellationToken externalCt)
+    public async Task<RepoStatusRefreshResult> RefreshStatusAsync(CancellationToken externalCt)
     {
         if (!HasGit || string.IsNullOrWhiteSpace(Path))
         {
             SyncState = BranchSyncState.Unknown;
             IsDirty = false;
-            return;
+            return new RepoStatusRefreshResult(false, null);
         }
 
         _ = EnsureBranchLoadedAsync();
@@ -107,7 +107,7 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         try
         {
             var status = await _git.GetStatusAsync(Path, ct).ConfigureAwait(false);
-            if (ct.IsCancellationRequested) return;
+            if (ct.IsCancellationRequested) return new RepoStatusRefreshResult(false, null);
 
             Ui(() =>
             {
@@ -117,8 +117,13 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
                 SyncState = status.SyncState;
                 IsDirty = status.IsDirty;
             });
+            return new RepoStatusRefreshResult(true, null);
         }
-        catch
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return new RepoStatusRefreshResult(false, null);
+        }
+        catch (Exception ex)
         {
             if (!ct.IsCancellationRequested)
             {
@@ -127,7 +132,9 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
                     SyncState = BranchSyncState.Unknown;
                     IsDirty = false;
                 });
+                return new RepoStatusRefreshResult(false, ex);
             }
+            return new RepoStatusRefreshResult(false, ex);
         }
     }
 
