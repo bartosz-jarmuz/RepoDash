@@ -1,7 +1,9 @@
 ﻿using Moq;
 using NUnit.Framework;
+using RepoDash.App.Abstractions;
 using RepoDash.App.ViewModels;
 using RepoDash.Core.Abstractions;
+using RepoDash.Core.Settings;
 using RepoDash.Core.Usage;
 
 namespace RepoDash.Tests.ViewModels;
@@ -18,8 +20,10 @@ public sealed class RepoItemViewModelUsageTests
         var links = new Mock<IRemoteLinkProvider>();
         var branch = new Mock<IBranchProvider>();
         var usage = new Mock<IRepoUsageService>();
+        var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        settings.SetupGet(s => s.Current).Returns(new GeneralSettings());
 
-        var vm = new RepoItemViewModel(launcher.Object, git.Object, links.Object, branch.Object, usage.Object)
+        var vm = new RepoItemViewModel(launcher.Object, git.Object, links.Object, branch.Object, usage.Object, settings.Object)
         {
             Name = "Sample",
             Path = @"C:\\dev\\sample",
@@ -42,8 +46,10 @@ public sealed class RepoItemViewModelUsageTests
         var links = new Mock<IRemoteLinkProvider>();
         var branch = new Mock<IBranchProvider>();
         var usage = new Mock<IRepoUsageService>();
+        var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        settings.SetupGet(s => s.Current).Returns(new GeneralSettings());
 
-        var vm = new RepoItemViewModel(launcher.Object, git.Object, links.Object, branch.Object, usage.Object)
+        var vm = new RepoItemViewModel(launcher.Object, git.Object, links.Object, branch.Object, usage.Object, settings.Object)
         {
             Name = "Sample",
             Path = @"C:\\dev\\sample",

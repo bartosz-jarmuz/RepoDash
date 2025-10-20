@@ -1,9 +1,13 @@
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RepoDash.App.Abstractions;
 using RepoDash.Core.Abstractions;
+using RepoDash.Core.Settings;
 using RepoDash.Core.Usage;
 
 namespace RepoDash.App.ViewModels;
@@ -15,24 +19,30 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     private readonly IRemoteLinkProvider _links;
     private readonly IBranchProvider _branchProvider;
     private readonly IRepoUsageService _usage;
+    private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
 
     private CancellationTokenSource? _branchCts;
     private CancellationTokenSource? _statusCts;
+    private Uri? _storyUri;
 
     public RepoItemViewModel(
         ILauncher launcher,
         IGitService git,
         IRemoteLinkProvider links,
         IBranchProvider branchProvider,
-        IRepoUsageService usage)
+        IRepoUsageService usage,
+        IReadOnlySettingsSource<GeneralSettings> generalSettings)
     {
         _launcher = launcher;
         _git = git;
         _links = links;
         _branchProvider = branchProvider;
         _usage = usage;
+        _generalSettings = generalSettings;
 
         _branchProvider.BranchChanged += OnBranchProviderChanged;
+        _generalSettings.PropertyChanged += OnGeneralSettingsChanged;
+        UpdateStoryLink();
     }
 
     [ObservableProperty] private string _name = string.Empty;
@@ -44,6 +54,7 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string? _currentBranch;
     [ObservableProperty] private BranchSyncState _syncState;
     [ObservableProperty] private bool _isDirty;
+    [ObservableProperty] private string? _storyReference;
 
     [ObservableProperty] private bool _isPinned;
     [ObservableProperty] private bool _isBlacklisted;
@@ -52,11 +63,15 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
 
     public Action? RequestClearSearch { get; set; }
 
+    public bool HasStoryLink => !string.IsNullOrWhiteSpace(StoryReference) && _storyUri is not null;
+
     public bool CanOpenSolution => HasSolution && !string.IsNullOrWhiteSpace(SolutionPath);
     partial void OnHasSolutionChanged(bool value) => OnPropertyChanged(nameof(CanOpenSolution));
     partial void OnSolutionPathChanged(string? value) => OnPropertyChanged(nameof(CanOpenSolution));
     partial void OnNameChanged(string value) => RefreshUsageFlags();
     partial void OnPathChanged(string value) => RefreshUsageFlags();
+    partial void OnHasGitChanged(bool value) => UpdateStoryLink();
+    partial void OnCurrentBranchChanged(string? value) => UpdateStoryLink();
 
     public async Task EnsureBranchLoadedAsync()
     {
@@ -138,6 +153,115 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OnGeneralSettingsChanged(object? sender, PropertyChangedEventArgs e)
+        => UpdateStoryLink();
+
+    private void UpdateStoryLink()
+    {
+        if (!HasGit)
+        {
+            ClearStoryLink();
+            return;
+        }
+
+        var branch = CurrentBranch;
+        if (string.IsNullOrWhiteSpace(branch) || string.Equals(branch, "-", StringComparison.Ordinal))
+        {
+            ClearStoryLink();
+            return;
+        }
+
+        var settings = _generalSettings.Current;
+        var baseUrl = settings.JiraBaseUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            ClearStoryLink();
+            return;
+        }
+
+        var patterns = settings.StoryReferenceRegularExpressions;
+        if (patterns is null || patterns.Count == 0)
+        {
+            ClearStoryLink();
+            return;
+        }
+
+        foreach (var pattern in patterns)
+        {
+            if (string.IsNullOrWhiteSpace(pattern)) continue;
+
+            Match match;
+            try
+            {
+                match = Regex.Match(branch, pattern, RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+            }
+            catch (ArgumentException)
+            {
+                continue;
+            }
+
+            if (!match.Success) continue;
+
+            var reference = ExtractStoryReference(match);
+            if (string.IsNullOrWhiteSpace(reference)) continue;
+
+            var uri = BuildStoryUri(baseUrl, reference);
+            if (uri is null) continue;
+
+            SetStoryLink(reference, uri);
+            return;
+        }
+
+        ClearStoryLink();
+    }
+
+    private static string? ExtractStoryReference(Match match)
+    {
+        var group = match.Groups["story"];
+        if (group.Success && !string.IsNullOrWhiteSpace(group.Value))
+        {
+            return group.Value;
+        }
+
+        for (var i = 1; i < match.Groups.Count; i++)
+        {
+            var g = match.Groups[i];
+            if (g.Success && !string.IsNullOrWhiteSpace(g.Value))
+            {
+                return g.Value;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(match.Value) ? null : match.Value;
+    }
+
+    private static Uri? BuildStoryUri(string baseUrl, string reference)
+    {
+        var urlCandidate = (baseUrl ?? string.Empty) + reference;
+        if (Uri.TryCreate(urlCandidate, UriKind.Absolute, out var direct))
+        {
+            return direct;
+        }
+
+        if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri) &&
+            Uri.TryCreate(baseUri, reference, out var combined))
+        {
+            return combined;
+        }
+
+        return null;
+    }
+
+    private void SetStoryLink(string? reference, Uri? uri)
+    {
+        _storyUri = uri;
+        StoryReference = reference;
+        OnPropertyChanged(nameof(HasStoryLink));
+        OpenStoryCommand?.NotifyCanExecuteChanged();
+    }
+
+    private void ClearStoryLink() => SetStoryLink(null, null);
+
     private void OnBranchProviderChanged(object? sender, string changedRepoPath)
     {
         if (!PathsEqual(changedRepoPath, Path)) return;
@@ -178,6 +302,15 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     {
         _launcher.OpenFolder(Path);
     }
+
+    [RelayCommand(CanExecute = nameof(CanOpenStory))]
+    private void OpenStory()
+    {
+        if (_storyUri is null) return;
+        _launcher.OpenUrl(_storyUri);
+    }
+
+    private bool CanOpenStory() => HasStoryLink;
 
     [RelayCommand]
     private async Task OpenRemoteAsync()
@@ -268,6 +401,7 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _branchProvider.BranchChanged -= OnBranchProviderChanged;
+        _generalSettings.PropertyChanged -= OnGeneralSettingsChanged;
         _branchCts?.Cancel();
         _branchCts?.Dispose();
         _branchCts = null;

@@ -7,6 +7,7 @@ using NUnit.Framework;
 using RepoDash.App.Abstractions;
 using RepoDash.App.ViewModels;
 using RepoDash.Core.Abstractions;
+using RepoDash.Core.Settings;
 using RepoDash.Core.Usage;
 
 namespace RepoDash.Tests.ViewModels;
@@ -41,7 +42,10 @@ public sealed class BlacklistedItemsViewModelTests
 
         using (var vm = new BlacklistedItemsViewModel(usage, dispatcher.Object))
         {
-            var repoVm = new RepoItemViewModel(new Mock<ILauncher>().Object, new Mock<IGitService>().Object, new Mock<IRemoteLinkProvider>().Object, new Mock<IBranchProvider>().Object, usage)
+            var generalSettings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+            generalSettings.SetupGet(s => s.Current).Returns(new GeneralSettings());
+
+            var repoVm = new RepoItemViewModel(new Mock<ILauncher>().Object, new Mock<IGitService>().Object, new Mock<IRemoteLinkProvider>().Object, new Mock<IBranchProvider>().Object, usage, generalSettings.Object)
             {
                 Name = "Hidden",
                 Path = "C:/dev/hidden",

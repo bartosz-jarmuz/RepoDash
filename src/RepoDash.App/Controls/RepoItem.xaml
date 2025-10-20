@@ -16,7 +16,10 @@
     </ResourceDictionary>
   </UserControl.Resources>
 
-  <Grid Margin="0,4" ToolTip="{Binding Path, Mode=OneTime}">
+  <Grid Margin="0,4"
+        ToolTip="{Binding Path, Mode=OneTime}"
+        Background="Transparent"
+        MouseLeftButtonDown="OnRootMouseLeftButtonDown">
     <Grid.ColumnDefinitions>
       <ColumnDefinition/>
       <ColumnDefinition Width="Auto"/>
@@ -50,13 +53,19 @@
       </TextBlock>
 
       <StackPanel Grid.Column="1">
+        <StackPanel Orientation="Horizontal">
         <TextBlock>
-          <TextBlock.InputBindings>
-            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding LaunchCommand}"/>
-          </TextBlock.InputBindings>
           <Run Text="{Binding Name}" FontWeight="SemiBold"/>
         </TextBlock>
-
+        <Button FontSize="10" Padding="5,0" 
+                Command="{Binding OpenStoryCommand}"
+                Visibility="{Binding HasStoryLink, Converter={StaticResource BooleanToVisibilityConverter}}"
+                ToolTip="Open Story" 
+                Background="#ABB8EC8F"
+                Margin="5,0">
+          <TextBlock Text="{Binding StoryReference}"/>
+        </Button>
+        </StackPanel>
         <TextBlock FontSize="10" Margin="0,2,0,0" FontWeight="SemiBold" >
           <TextBlock.Style>
             <Style TargetType="TextBlock">

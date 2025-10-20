@@ -227,7 +227,7 @@ public partial class MainViewModel : ObservableObject
 
     private RepoItemViewModel MakeRepoItemVm(CachedRepo r)
     {
-        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider, _usage)
+        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider, _usage, _generalSettings)
         {
             Name = r.RepoName,
             Path = r.RepoPath,
@@ -346,7 +346,7 @@ public partial class MainViewModel : ObservableObject
 
     private RepoItemViewModel CreateDetachedUsageItem(RepoUsageEntry entry)
     {
-        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider, _usage)
+        var vm = new RepoItemViewModel(_launcher, _git, _links, _branchProvider, _usage, _generalSettings)
         {
             Name = entry.RepoName,
             Path = entry.RepoPath,

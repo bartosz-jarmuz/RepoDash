@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace RepoDash.Core.Settings;
 
@@ -74,5 +75,18 @@ public sealed class GeneralSettings
     [Category("6. Recent and frequently used repos")]
     [DisplayName("Pins apply to grouped repositories")]
     public bool PinningAppliesToAutomaticGroupings { get; set; } = true;
+
+    [Category("7. JIRA Connectivity")]
+    [DisplayName("JIRA base URL")]
+    [Description("Base URL used when opening a JIRA story. Example: \"https://jira.example.com/browse/\"")]
+    public string? JiraBaseUrl { get; set; }
+
+    [Category("7. JIRA Connectivity")]
+    [DisplayName("Story reference regular expressions")]
+    [Description("Regex patterns evaluated against the current branch name. The first successful match opens a story link. Use a named \"story\" group or the first capture group to control the text.")]
+    public ObservableCollection<string> StoryReferenceRegularExpressions { get; init; } = new()
+    {
+        @"(?<story>[A-Z]+-\d+)"
+    };
 
 }

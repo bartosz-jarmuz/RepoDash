@@ -162,8 +162,10 @@ public sealed class RepoGroupsFilteringTests
         var usage = new Mock<IRepoUsageService>();
         usage.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
         usage.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+        var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        settings.SetupGet(s => s.Current).Returns(new GeneralSettings());
 
-        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage.Object)
+        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage.Object, settings.Object)
         {
             Name = Path.GetFileName(repoPath),
             Path = repoPath

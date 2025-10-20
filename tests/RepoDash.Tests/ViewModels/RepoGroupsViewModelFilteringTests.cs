@@ -251,6 +251,8 @@ public sealed class RepoGroupsViewModelFilteringTests
         var git = new Mock<IGitService>().Object;
         var links = new Mock<IRemoteLinkProvider>().Object;
         var branch = new Mock<IBranchProvider>();
+        var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        settings.SetupGet(s => s.Current).Returns(new GeneralSettings());
 
         IRepoUsageService usage;
         if (usageOverride is not null)
@@ -279,7 +281,7 @@ public sealed class RepoGroupsViewModelFilteringTests
             usage = usageMock.Object;
         }
 
-        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage)
+        var vm = new RepoItemViewModel(launcher, git, links, branch.Object, usage, settings.Object)
         {
             Name = Path.GetFileName(repoPath),
             Path = repoPath,
