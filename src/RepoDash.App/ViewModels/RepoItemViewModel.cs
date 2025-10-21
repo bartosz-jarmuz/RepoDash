@@ -1,14 +1,16 @@
 using System;
 using System.ComponentModel;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RepoDash.App.Abstractions;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Settings;
 using RepoDash.Core.Usage;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
 
 namespace RepoDash.App.ViewModels;
 
@@ -410,4 +412,3 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
         _statusCts = null;
     }
 }
-
