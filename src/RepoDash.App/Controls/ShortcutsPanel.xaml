@@ -14,37 +14,78 @@
           SnapsToDevicePixels="True">
     <ScrollViewer HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto">
-      <ItemsControl x:Name="Items"
-                    ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Margin="2"/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <Button Padding="4" Margin="2" ToolTip="{Binding DisplayName}" Click="OnShortcutClick">
-              <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                <Grid Width="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                      Height="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                  <Image Source="{Binding Icon}" Stretch="Uniform"
-                         Visibility="{Binding Icon, Converter={x:Static controls:VisibilityConverters.FromNullToCollapsed}}"/>
-                  <Border Background="#22000000" CornerRadius="4" Padding="0"
-                          Visibility="{Binding Icon, Converter={x:Static controls:VisibilityConverters.FromNotNullToCollapsed}}">
-                    <TextBlock Text="{Binding FallbackGlyph}"
-                               FontSize="{Binding GlyphFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                  </Border>
-                </Grid>
-                <TextBlock Text="{Binding DisplayName}" Margin="0,4,0,0"
-                           TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"
-                           MaxWidth="{Binding MaxLabelWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-              </StackPanel>
-            </Button>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
+      <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}">
+        <ItemsControl x:Name="Items"
+                      Margin="0,0,0,0"
+                      AllowDrop="True"
+                      Background="Transparent"
+                      ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      PreviewDragOver="OnItemsPreviewDragOver"
+                      DragLeave="OnItemsDragLeave"
+                      Drop="OnItemsDrop">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          Margin="2"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Padding="4"
+                      Margin="2"
+                      ToolTip="{Binding DisplayName}"
+                      Click="OnShortcutClick"
+                      PreviewMouseLeftButtonDown="OnShortcutPreviewMouseLeftButtonDown"
+                      PreviewMouseMove="OnShortcutPreviewMouseMove">
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                  <Grid Width="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        Height="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                    <Image Source="{Binding Icon}" Stretch="Uniform"
+                           Visibility="{Binding Icon, Converter={x:Static controls:VisibilityConverters.FromNullToCollapsed}}"/>
+                    <Border Background="#22000000" CornerRadius="4" Padding="0"
+                            Visibility="{Binding Icon, Converter={x:Static controls:VisibilityConverters.FromNotNullToCollapsed}}">
+                      <TextBlock Text="{Binding FallbackGlyph}"
+                                 FontSize="{Binding GlyphFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                  </Grid>
+                  <TextBlock Text="{Binding DisplayName}" Margin="0,4,0,0"
+                             TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"
+                             MaxWidth="{Binding MaxLabelWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                </StackPanel>
+                <Button.ContextMenu>
+                  <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                    <MenuItem Header="Rename..." Click="OnRenameShortcutClick" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Delete" Click="OnDeleteShortcutClick" CommandParameter="{Binding}"/>
+                  </ContextMenu>
+                </Button.ContextMenu>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button x:Name="AddButton"
+                Margin="2"
+                Padding="8"
+                Click="OnAddShortcutClick">
+          <Button.ToolTip>
+            <ToolTip>Add shortcut</ToolTip>
+          </Button.ToolTip>
+          <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+            <Border Width="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    Height="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    Background="#11000000"
+                    BorderBrush="#44000000"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <TextBlock Text="+" FontSize="{Binding GlyphFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                         FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Add" Margin="0,4,0,0"
+                       HorizontalAlignment="Center"
+                       FontWeight="SemiBold"/>
+          </StackPanel>
+        </Button>
+      </StackPanel>
     </ScrollViewer>
   </Border>
 </UserControl>
