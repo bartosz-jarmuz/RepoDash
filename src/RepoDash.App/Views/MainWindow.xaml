@@ -22,6 +22,8 @@
       CommandParameter="FilterTextBox" />
   </Window.InputBindings>
   <DockPanel>
+    <controls:ShortcutsPanel Margin="6"/>
+
     <!-- Top bar as a single control; it composes child controls -->
     <controls:TopBar DockPanel.Dock="Top" DataContext="{Binding}" Margin="10"/>
     <!-- Status bar at the bottom -->

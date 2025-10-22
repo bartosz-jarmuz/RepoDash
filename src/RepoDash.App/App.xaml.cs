@@ -55,6 +55,7 @@ public partial class App : Application
         sc.AddSingleton<IColorizer, PastelColorizer>();
         sc.AddSingleton<IRemoteLinkProvider, GitRemoteLinkProvider>();
         sc.AddSingleton<ILauncher, Launcher>();
+        sc.AddSingleton<IShortcutIconProvider, ShortcutIconProvider>();
         sc.AddSingleton<IRepoScanner, FileSystemRepoScanner>();
         sc.AddSingleton<IUiDispatcher>(_ => new WpfUiDispatcher(Current.Dispatcher));
 

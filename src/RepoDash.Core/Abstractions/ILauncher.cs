@@ -8,4 +8,5 @@ public interface ILauncher
     void OpenGitUi(string repoPath);
     void OpenGitCommandLine(string repoPath);
     void OpenNonSlnRepo(string repoPath);
+    void OpenTarget(string targetPathOrUrl, string? arguments);
 }

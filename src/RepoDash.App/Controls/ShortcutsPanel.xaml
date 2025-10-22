@@ -1,0 +1,50 @@
+﻿<UserControl x:Class="RepoDash.App.Controls.ShortcutsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:RepoDash.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=UserControl}"
+             Loaded="OnLoaded"
+             Unloaded="OnUnloaded">
+  <Border Padding="4"
+          Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+          CornerRadius="6"
+          SnapsToDevicePixels="True">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto">
+      <ItemsControl x:Name="Items"
+                    ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        Margin="2"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Padding="4" Margin="2" ToolTip="{Binding DisplayName}" Click="OnShortcutClick">
+              <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <Grid Width="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      Height="{Binding IconPixelSize, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  <Image Source="{Binding Icon}" Stretch="Uniform"
+                         Visibility="{Binding Icon, Converter={x:Static controls:VisibilityConverters.FromNullToCollapsed}}"/>
+                  <Border Background="#22000000" CornerRadius="4" Padding="0"
+                          Visibility="{Binding Icon, Converter={x:Static controls:VisibilityConverters.FromNotNullToCollapsed}}">
+                    <TextBlock Text="{Binding FallbackGlyph}"
+                               FontSize="{Binding GlyphFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                </Grid>
+                <TextBlock Text="{Binding DisplayName}" Margin="0,4,0,0"
+                           TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"
+                           MaxWidth="{Binding MaxLabelWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Border>
+</UserControl>

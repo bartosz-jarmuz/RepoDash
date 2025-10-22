@@ -67,6 +67,32 @@ public sealed class Launcher : ILauncher
         OpenFolder(repoPath);
     }
 
+    public void OpenTarget(string targetPathOrUrl, string? arguments)
+    {
+        if (string.IsNullOrWhiteSpace(targetPathOrUrl)) return;
+
+        if (Uri.TryCreate(targetPathOrUrl, UriKind.Absolute, out var uri) &&
+            (uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ||
+             uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)))
+        {
+            OpenUrl(uri);
+            return;
+        }
+
+        try
+        {
+            var psi = new ProcessStartInfo(targetPathOrUrl, arguments ?? string.Empty)
+            {
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+        }
+        catch
+        {
+            // Swallow to avoid UI disruption from user-provided invalid paths
+        }
+    }
+
     private static bool TryLaunchCustomTool(string executablePath, string repoPath)
     {
         try
