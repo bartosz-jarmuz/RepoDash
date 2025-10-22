@@ -5,12 +5,13 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>RepoDash.App</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationIcon>Resources\RepoDash.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\RepoDash_White.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Resources\RepoDash.ico" />
+    <Resource Include="Resources\RepoDash_White.ico" />
     <Resource Include="Resources\RepoDash.png" />
   </ItemGroup>
   <ItemGroup>

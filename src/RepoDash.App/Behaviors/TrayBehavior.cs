@@ -110,7 +110,7 @@ public sealed class TrayBehavior : DependencyObject
     {
         try
         {
-            var uri = new Uri("pack://application:,,,/Resources/RepoDash.ico", UriKind.Absolute);
+            var uri = new Uri("pack://application:,,,/Resources/RepoDash_White.ico", UriKind.Absolute);
             var streamInfo = System.Windows.Application.GetResourceStream(uri);
             if (streamInfo?.Stream is null) return null;
             using var ms = new MemoryStream();
