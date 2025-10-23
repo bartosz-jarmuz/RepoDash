@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -13,6 +14,8 @@ public sealed partial class StatusBarViewModel : ObservableObject
     private long _currentOperationId;
     private readonly object _summaryLock = new();
     private SummarySnapshot _snapshot = SummarySnapshot.Empty;
+    private readonly DispatcherTimer _lastRefreshTimer;
+    private DateTimeOffset? _lastRefreshUtc;
 
     [ObservableProperty]
     private string _message = "Ready";
@@ -37,6 +40,16 @@ public sealed partial class StatusBarViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isErrorExpanded;
+
+    public StatusBarViewModel()
+    {
+        _lastRefreshTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMinutes(1),
+            IsEnabled = false
+        };
+        _lastRefreshTimer.Tick += (_, __) => RefreshLastRefreshDisplay();
+    }
 
     public long BeginProgress(string message, int total)
     {
@@ -151,6 +164,69 @@ public sealed partial class StatusBarViewModel : ObservableObject
         }
     }
 
+    public string LastRefreshDisplay
+    {
+        get
+        {
+            if (_lastRefreshUtc is null)
+                return "Last refresh: not yet";
+
+            var elapsed = DateTimeOffset.UtcNow - _lastRefreshUtc.Value;
+            if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+
+            string relative = elapsed switch
+            {
+                var t when t < TimeSpan.FromMinutes(1) => "just now",
+                var t when t < TimeSpan.FromHours(1) => FormatUnits(t.TotalMinutes, "minute"),
+                var t when t < TimeSpan.FromDays(1) => FormatUnits(t.TotalHours, "hour"),
+                var t when t < TimeSpan.FromDays(7) => FormatUnits(t.TotalDays, "day"),
+                _ => _lastRefreshUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+            };
+
+            return $"Last refresh: {relative}";
+        }
+    }
+
+    public string? LastRefreshToolTip
+    {
+        get
+        {
+            if (_lastRefreshUtc is null) return "Repositories have not been refreshed yet.";
+
+            var local = _lastRefreshUtc.Value.ToLocalTime();
+            var elapsed = DateTimeOffset.UtcNow - _lastRefreshUtc.Value;
+            if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+
+            return $"{local:yyyy-MM-dd HH:mm:ss} ({FormatRelative(elapsed)})";
+        }
+    }
+
+    public void SetLastRefresh(DateTimeOffset? timestampUtc)
+    {
+        _lastRefreshUtc = timestampUtc;
+        RefreshLastRefreshDisplay();
+
+        if (_lastRefreshUtc is not null)
+        {
+            if (!_lastRefreshTimer.IsEnabled)
+            {
+                // align next tick to the upcoming minute boundary for smoother updates
+                var now = DateTimeOffset.Now;
+                var msUntilNextMinute = (int)(60000 - (now.Second * 1000 + now.Millisecond));
+                _lastRefreshTimer.Interval = TimeSpan.FromMilliseconds(msUntilNextMinute);
+                _lastRefreshTimer.Start();
+            }
+        }
+        else
+        {
+            if (_lastRefreshTimer.IsEnabled)
+            {
+                _lastRefreshTimer.Stop();
+                _lastRefreshTimer.Interval = TimeSpan.FromMinutes(1);
+            }
+        }
+    }
+
     public void UpdateSummary(int total, int upToDate, int behind, int ahead, int unknown)
     {
         lock (_summaryLock)
@@ -177,6 +253,31 @@ public sealed partial class StatusBarViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ProgressDisplay));
         OnPropertyChanged(nameof(IsProgressDetailsVisible));
+    }
+
+    private void RefreshLastRefreshDisplay()
+    {
+        OnPropertyChanged(nameof(LastRefreshDisplay));
+        OnPropertyChanged(nameof(LastRefreshToolTip));
+        if (_lastRefreshTimer.IsEnabled && _lastRefreshTimer.Interval != TimeSpan.FromMinutes(1))
+        {
+            _lastRefreshTimer.Interval = TimeSpan.FromMinutes(1);
+        }
+    }
+
+    private static string FormatUnits(double value, string unit)
+    {
+        var rounded = Math.Max(1, (int)Math.Round(value));
+        return rounded == 1 ? $"1 {unit} ago" : $"{rounded} {unit}s ago";
+    }
+
+    private static string FormatRelative(TimeSpan elapsed)
+    {
+        if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+        if (elapsed < TimeSpan.FromMinutes(1)) return "just now";
+        if (elapsed < TimeSpan.FromHours(1)) return FormatUnits(elapsed.TotalMinutes, "minute");
+        if (elapsed < TimeSpan.FromDays(1)) return FormatUnits(elapsed.TotalHours, "hour");
+        return FormatUnits(elapsed.TotalDays, "day");
     }
 
     private readonly record struct SummarySnapshot(int Total, int UpToDate, int Behind, int Ahead, int Unknown)

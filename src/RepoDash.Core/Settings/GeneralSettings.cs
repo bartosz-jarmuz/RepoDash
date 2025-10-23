@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -21,6 +23,14 @@ public sealed class GeneralSettings
 
     [Category("2. User interface")]
     public int GroupPanelWidth { get; set; } = 360;
+
+    [Category("3. Repository")]
+    [DisplayName("Status refresh cooldown (minutes)")]
+    [Description("Minimum number of minutes between automatic repository status refreshes.")]
+    public int StatusRefreshCooldownMinutes { get; set; } = 10;
+
+    [Browsable(false)]
+    public Dictionary<string, DateTimeOffset?> StatusRefreshHistory { get; set; } = new();
 
     [Category("3. Repository")]
     public int GroupingSegment { get; set; } = 2;

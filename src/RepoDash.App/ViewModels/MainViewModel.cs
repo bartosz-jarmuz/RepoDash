@@ -29,6 +29,7 @@ public partial class MainViewModel : ObservableObject
     private readonly RepoCacheService _cacheService;
     private readonly IRepoUsageService _usage;
     private readonly GitOperationCoordinator _gitCoordinator;
+    private readonly RepoStatusRefreshService _statusRefresh;
     private readonly List<RepoItemViewModel> _detachedUsageItems = new();
 
     [ObservableProperty] private bool _focusSearchRequested;
@@ -52,6 +53,7 @@ public partial class MainViewModel : ObservableObject
         IRemoteLinkProvider links,
         SettingsMenuViewModel settingsMenuVm,
         RepoCacheService cacheService,
+        RepoStatusRefreshService statusRefreshService,
         IRepoUsageService usage)
     {
         _generalSettings = generalSettings;
@@ -64,6 +66,7 @@ public partial class MainViewModel : ObservableObject
         _branchProvider = branchProvider;
         _links = links;
         _cacheService = cacheService;
+        _statusRefresh = statusRefreshService;
         _usage = usage;
 
         // Child VMs
@@ -73,6 +76,7 @@ public partial class MainViewModel : ObservableObject
         RepoGroups = new RepoGroupsViewModel(_generalSettings, _generalSettingsStore, _toolsSettings, _toolsSettingsStore, _colorSettingsStore);
         GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
         StatusBar = new StatusBarViewModel();
+        StatusBar.SetLastRefresh(_statusRefresh.GetLastRefresh(_generalSettings.Current.RepoRoot));
         _gitCoordinator = new GitOperationCoordinator(_git, _launcher, StatusBar, Dispatch);
         _usage.Changed += OnUsageChanged;
 
@@ -108,11 +112,21 @@ public partial class MainViewModel : ObservableObject
         GlobalGitOperations.OnFetchAll = async repos =>
         {
             await _gitCoordinator.FetchAllAsync(repos, CancellationToken.None).ConfigureAwait(false);
+            await RecordRefreshForCurrentRootAsync(CancellationToken.None).ConfigureAwait(false);
             Dispatch(UpdateStatusSummary);
         };
         GlobalGitOperations.OnPullAll = async (repos, rebase) =>
         {
             await _gitCoordinator.PullAllAsync(repos, rebase, CancellationToken.None).ConfigureAwait(false);
+            await RecordRefreshForCurrentRootAsync(CancellationToken.None).ConfigureAwait(false);
+            Dispatch(UpdateStatusSummary);
+        };
+        GlobalGitOperations.OnRefreshAll = async repos =>
+        {
+            _refreshCts?.Cancel();
+            _refreshCts = new CancellationTokenSource();
+            var ct = _refreshCts.Token;
+            await RefreshStatusesAsync(repos, ct, force: true).ConfigureAwait(false);
             Dispatch(UpdateStatusSummary);
         };
 
@@ -121,6 +135,7 @@ public partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(Settings));
             OnPropertyChanged(nameof(WindowTitle));
             OnPropertyChanged(nameof(ShowInTaskbar));
+            StatusBar.SetLastRefresh(_statusRefresh.GetLastRefresh(_generalSettings.Current.RepoRoot));
             UpdateUsageGroups();
         };
 
@@ -165,6 +180,7 @@ public partial class MainViewModel : ObservableObject
 
         // keep existing persistence semantics
         _generalSettings.Current.RepoRoot = root;
+        StatusBar.SetLastRefresh(_statusRefresh.GetLastRefresh(root));
 
         _refreshCts?.Cancel();
         _refreshCts = new CancellationTokenSource();
@@ -191,10 +207,10 @@ public partial class MainViewModel : ObservableObject
                     .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                await _gitCoordinator.RefreshStatusesAsync(
+                await RefreshStatusesAsync(
                     finalItems,
                     ct,
-                    description: "Refreshing repository statuses").ConfigureAwait(false);
+                    force: false).ConfigureAwait(false);
                 UpdateStatusSummary();
             }
         }
@@ -378,6 +394,68 @@ public partial class MainViewModel : ObservableObject
         _ = vm.EnsureBranchLoadedAsync();
         _detachedUsageItems.Add(vm);
         return vm;
+    }
+
+    private async Task<bool> RefreshStatusesAsync(
+        IReadOnlyList<RepoItemViewModel> repos,
+        CancellationToken ct,
+        bool force,
+        string description = "Refreshing repository statuses")
+    {
+        if (repos.Count == 0 || ct.IsCancellationRequested)
+            return false;
+
+        var root = _generalSettings.Current.RepoRoot;
+        if (!_statusRefresh.ShouldRefresh(root, force))
+            return false;
+
+        await _gitCoordinator.RefreshStatusesAsync(repos, ct, description).ConfigureAwait(false);
+        if (ct.IsCancellationRequested)
+            return false;
+
+        await RecordRefreshForCurrentRootAsync(ct).ConfigureAwait(false);
+        return true;
+    }
+
+    private async Task RecordRefreshForCurrentRootAsync(CancellationToken ct)
+    {
+        var root = _generalSettings.Current.RepoRoot;
+        if (string.IsNullOrWhiteSpace(root))
+            return;
+
+        var stamp = await _statusRefresh.MarkRefreshedAsync(root, ct).ConfigureAwait(false);
+        Dispatch(() =>
+        {
+            StatusBar.SetLastRefresh(stamp);
+            OnPropertyChanged(nameof(Settings));
+        });
+    }
+
+    public async Task RefreshStatusesOnRestoreAsync()
+    {
+        var repos = RepoGroups.GetAllRepoItems(gitOnly: true);
+        if (repos.Count == 0)
+            return;
+
+        if (!_statusRefresh.ShouldRefresh(_generalSettings.Current.RepoRoot, force: false))
+            return;
+
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        var ct = _refreshCts.Token;
+
+        try
+        {
+            var refreshed = await RefreshStatusesAsync(repos, ct, force: false).ConfigureAwait(false);
+            if (refreshed && !ct.IsCancellationRequested)
+            {
+                Dispatch(UpdateStatusSummary);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // swallow; restore-triggered refresh was aborted
+        }
     }
 
     public void RequestFocusSearch()

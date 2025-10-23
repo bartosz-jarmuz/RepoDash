@@ -41,10 +41,17 @@
       </StatusBarItem>
 
       <StatusBarItem>
-        <TextBlock Text="{Binding SummaryDisplay}"
-                   Margin="24,0,0,0"
-                   Foreground="{DynamicResource BrushTextSubtle}"
-                   VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="{Binding SummaryDisplay}"
+                     Margin="24,0,0,0"
+                     Foreground="{DynamicResource BrushTextSubtle}"
+                     VerticalAlignment="Center" />
+          <TextBlock Text="{Binding LastRefreshDisplay}"
+                     Margin="24,0,0,0"
+                     Foreground="{DynamicResource BrushTextSubtle}"
+                     VerticalAlignment="Center"
+                     ToolTip="{Binding LastRefreshToolTip}" />
+        </StackPanel>
       </StatusBarItem>
 
       <StatusBarItem HorizontalAlignment="Right">

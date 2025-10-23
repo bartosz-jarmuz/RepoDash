@@ -6,8 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
-using RepoDash.App.ViewModels;
 using RepoDash.App.Abstractions;
+using RepoDash.App.Services;
+using RepoDash.App.ViewModels;
 using RepoDash.Core.Abstractions;
 using RepoDash.Core.Caching;
 using RepoDash.Core.Settings;
@@ -117,6 +118,7 @@ namespace RepoDash.Tests
             generalStore.SetupGet(s => s.Current).Returns(general);
             generalStore
                 .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
+                .Callback<Action<GeneralSettings>, CancellationToken>((action, _) => action?.Invoke(general))
                 .Returns(Task.CompletedTask);
 
             var tools = new ToolsPanelSettings();
@@ -152,6 +154,8 @@ namespace RepoDash.Tests
             usage.Setup(u => u.IsPinned(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
             usage.Setup(u => u.IsBlacklisted(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
 
+            var refreshService = new RepoStatusRefreshService(generalSource.Object, generalStore.Object);
+
             return new MainViewModel(
                 generalSource.Object,
                 generalStore.Object,
@@ -164,6 +168,7 @@ namespace RepoDash.Tests
                 links.Object,
                 settingsMenuVm,
                 cache,
+                refreshService,
                 usage.Object);
         }
 

@@ -9,6 +9,7 @@ public partial class GlobalGitOperationsMenuViewModel : ObservableObject
     public Func<IReadOnlyList<RepoItemViewModel>>? ResolveGitRepos { get; set; }
     public Func<IReadOnlyList<RepoItemViewModel>, Task>? OnFetchAll { get; set; }
     public Func<IReadOnlyList<RepoItemViewModel>, bool, Task>? OnPullAll { get; set; }
+    public Func<IReadOnlyList<RepoItemViewModel>, Task>? OnRefreshAll { get; set; }
 
     [RelayCommand]
     private async Task GitFetchAllAsync()
@@ -22,6 +23,13 @@ public partial class GlobalGitOperationsMenuViewModel : ObservableObject
 
     [RelayCommand]
     private async Task GitPullRebaseAllAsync() => await Pull(rebase: true);
+
+    [RelayCommand]
+    private async Task GitRefreshStatusesAsync()
+    {
+        var repos = ResolveGitRepos?.Invoke() ?? [];
+        if (OnRefreshAll is not null) await OnRefreshAll(repos);
+    }
 
     private async Task Pull(bool rebase)
     {

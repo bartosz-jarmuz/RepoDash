@@ -64,6 +64,7 @@ public partial class App : Application
         sc.AddSingleton<IRepoUsageStore, JsonRepoUsageStore>();
         sc.AddSingleton<RepoCacheService>();
         sc.AddSingleton<IRepoUsageService, RepoUsageService>();
+        sc.AddSingleton<RepoStatusRefreshService>();
 
         sc.AddSingleton<ViewModels.MainViewModel>();
         sc.AddTransient<BlacklistedItemsViewModel>();
