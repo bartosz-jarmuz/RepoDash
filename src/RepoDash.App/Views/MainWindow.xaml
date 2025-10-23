@@ -22,12 +22,14 @@
       CommandParameter="FilterTextBox" />
   </Window.InputBindings>
   <DockPanel>
-    <controls:ShortcutsPanel Margin="6"/>
-
-    <!-- Top bar as a single control; it composes child controls -->
+    <!-- Top bar should be first so left/right panels sit beneath it -->
     <controls:TopBar DockPanel.Dock="Top" DataContext="{Binding}" Margin="10"/>
     <!-- Status bar at the bottom -->
     <controls:StatusBar DockPanel.Dock="Bottom" DataContext="{Binding StatusBar}" />
+
+    <controls:ShortcutsPanel Margin="6"/>
+    <controls:ToolsPanel Margin="6" DataContext="{Binding RepoGroups}"/>
+
     <!-- Repo area -->
     <controls:RepoGroups DataContext="{Binding RepoGroups}"/>
   </DockPanel>

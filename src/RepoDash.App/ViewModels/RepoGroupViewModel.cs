@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -23,7 +23,10 @@ public partial class RepoGroupViewModel : ObservableObject
     private readonly List<RepoItemViewModel> _allItems = [];
     private readonly IReadOnlySettingsSource<GeneralSettings> _settings;
     private readonly ISettingsStore<GeneralSettings> _generalSettingsStore;
+    private readonly IReadOnlySettingsSource<ToolsPanelSettings> _toolsSettings;
+    private readonly ISettingsStore<ToolsPanelSettings> _toolsSettingsStore;
     private readonly ISettingsStore<ColorSettings> _colorSettingsStore;
+    private readonly IDisposable _layoutRefreshSubscription;
     private readonly Dictionary<RepoItemViewModel, PropertyChangedEventHandler> _subscriptions = new();
     private string _currentFilter = string.Empty;
     private string _internalKey = string.Empty;
@@ -34,19 +37,42 @@ public partial class RepoGroupViewModel : ObservableObject
     public RepoGroupViewModel(
         IReadOnlySettingsSource<GeneralSettings> settings,
         ISettingsStore<GeneralSettings> generalSettingsStore,
+        IReadOnlySettingsSource<ToolsPanelSettings> toolsSettings,
+        ISettingsStore<ToolsPanelSettings> toolsSettingsStore,
         ISettingsStore<ColorSettings> colorSettingsStore)
     {
-        _settings = settings;
-        _generalSettingsStore = generalSettingsStore;
-        _colorSettingsStore = colorSettingsStore;
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _generalSettingsStore = generalSettingsStore ?? throw new ArgumentNullException(nameof(generalSettingsStore));
+        _toolsSettings = toolsSettings ?? throw new ArgumentNullException(nameof(toolsSettings));
+        _toolsSettingsStore = toolsSettingsStore ?? throw new ArgumentNullException(nameof(toolsSettingsStore));
+        _colorSettingsStore = colorSettingsStore ?? throw new ArgumentNullException(nameof(colorSettingsStore));
 
         _settings.PropertyChanged += (_, __) =>
         {
             OnPropertyChanged(nameof(Settings));
             RaiseVisibilityState();
+            LayoutRefreshCoordinator.Default.Refresh();
         };
-        _generalSettingsStore.SettingsChanged += (_, __) => RaiseVisibilityState();
+        _generalSettingsStore.SettingsChanged += (_, __) =>
+        {
+            RaiseVisibilityState();
+            LayoutRefreshCoordinator.Default.Refresh();
+        };
+        _toolsSettings.PropertyChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(ToolsSettings));
+            RaiseVisibilityState();
+            LayoutRefreshCoordinator.Default.Refresh();
+        };
+        _toolsSettingsStore.SettingsChanged += (_, __) =>
+        {
+            RaiseVisibilityState();
+            LayoutRefreshCoordinator.Default.Refresh();
+        };
         _colorSettingsStore.SettingsChanged += (_, __) => RaiseColorState();
+
+        _layoutRefreshSubscription = LayoutRefreshCoordinator.Default.Register(NotifyLayoutChanged);
+        NotifyLayoutChanged();
     }
 
     [ObservableProperty] private string _groupKey = string.Empty;
@@ -83,6 +109,22 @@ public partial class RepoGroupViewModel : ObservableObject
 
     public GeneralSettings Settings => _settings.Current;
 
+    public ToolsPanelSettings ToolsSettings => _toolsSettings.Current;
+
+    public int PanelWidth => Settings.GroupPanelWidth;
+
+    public int VisibleItemCount
+    {
+        get
+        {
+            if (IsRecentSpecial)
+                return Math.Max(1, ToolsSettings.RecentListVisibleCount);
+            if (IsFrequentSpecial)
+                return Math.Max(1, ToolsSettings.FrequentListVisibleCount);
+            return Math.Max(1, Settings.ListItemVisibleCount);
+        }
+    }
+
     public bool ShowVisibilityToggleOption => IsRecentSpecial || IsFrequentSpecial;
 
     public string ToggleVisibilityLabel
@@ -94,10 +136,10 @@ public partial class RepoGroupViewModel : ObservableObject
                 : $"\"{GroupKey}\" group";
 
             if (IsRecentSpecial)
-                return (_generalSettingsStore.Current.ShowRecent ? "Hide " : "Show ") + groupDescriptor;
+                return (_toolsSettingsStore.Current.ShowRecent ? "Hide " : "Show ") + groupDescriptor;
 
             if (IsFrequentSpecial)
-                return (_generalSettingsStore.Current.ShowFrequent ? "Hide " : "Show ") + groupDescriptor;
+                return (_toolsSettingsStore.Current.ShowFrequent ? "Hide " : "Show ") + groupDescriptor;
 
             return string.Empty;
         }
@@ -140,47 +182,42 @@ public partial class RepoGroupViewModel : ObservableObject
 
     public void SetItems(IEnumerable<RepoItemViewModel> items)
     {
-        foreach (var existing in _allItems)
-            Detach(existing);
-
+        UnsubscribeAll();
         _allItems.Clear();
 
         foreach (var item in items)
         {
             _allItems.Add(item);
-            Attach(item);
+            Subscribe(item);
         }
 
         ApplyFilter(_currentFilter);
     }
 
-    public void ApplyFilter(string term)
+    public void ApplyFilter(string filter)
     {
-        _currentFilter = term ?? string.Empty;
+        _currentFilter = filter ?? string.Empty;
 
-        var result = new List<RepoItemViewModel>(_allItems.Count);
-        if (string.IsNullOrWhiteSpace(_currentFilter))
+        IEnumerable<RepoItemViewModel> source = _allItems;
+
+        if (ExcludeBlacklisted)
         {
-            foreach (var item in _allItems)
-            {
-                if (ExcludeBlacklisted && item.IsBlacklisted) continue;
-                result.Add(item);
-            }
-        }
-        else
-        {
-            foreach (var item in _allItems)
-            {
-                if (ExcludeBlacklisted && item.IsBlacklisted) continue;
-                if (item.Name.Contains(_currentFilter, StringComparison.OrdinalIgnoreCase) ||
-                    item.Path.Contains(_currentFilter, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Add(item);
-                }
-            }
+            source = source.Where(item => !item.IsBlacklisted);
         }
 
-        var ordered = SortItems(result);
+        if (!string.IsNullOrWhiteSpace(_currentFilter))
+        {
+            source = source.Where(item =>
+                item.Name.Contains(_currentFilter, StringComparison.OrdinalIgnoreCase) ||
+                item.Path.Contains(_currentFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (IsSpecial && SortComparison is not null)
+        {
+            source = source.OrderBy(item => item, Comparer<RepoItemViewModel>.Create(SortComparison));
+        }
+
+        var ordered = SortItems(source);
         Items = new ObservableCollection<RepoItemViewModel>(ordered);
     }
 
@@ -190,7 +227,7 @@ public partial class RepoGroupViewModel : ObservableObject
         if (existing is null)
         {
             _allItems.Add(item);
-            Attach(item);
+            Subscribe(item);
         }
         else
         {
@@ -209,21 +246,38 @@ public partial class RepoGroupViewModel : ObservableObject
         var existing = _allItems.FirstOrDefault(i => string.Equals(i.Path, repoPath, StringComparison.OrdinalIgnoreCase));
         if (existing is null) return false;
 
-        Detach(existing);
+        Unsubscribe(existing);
         _allItems.Remove(existing);
         ApplyFilter(_currentFilter);
         return true;
     }
 
-    private void Attach(RepoItemViewModel item)
+    public void SetItemsFromSpecial(IEnumerable<RepoItemViewModel> items)
+    {
+        _allItems.Clear();
+        foreach (var item in items)
+        {
+            _allItems.Add(item);
+        }
+
+        ApplyFilter(_currentFilter);
+    }
+
+    public void SetItems(IEnumerable<RepoItemViewModel> items, bool allowPinning)
+    {
+        AllowPinning = allowPinning;
+        SetItems(items);
+    }
+
+    private void Subscribe(RepoItemViewModel item)
     {
         if (_subscriptions.ContainsKey(item)) return;
 
         PropertyChangedEventHandler handler = (_, e) =>
         {
-            if (e.PropertyName == nameof(RepoItemViewModel.IsPinned) ||
-                e.PropertyName == nameof(RepoItemViewModel.Name) ||
-                e.PropertyName == nameof(RepoItemViewModel.IsBlacklisted))
+            if (e.PropertyName is nameof(RepoItemViewModel.IsPinned)
+                or nameof(RepoItemViewModel.Name)
+                or nameof(RepoItemViewModel.IsBlacklisted))
             {
                 ApplyFilter(_currentFilter);
             }
@@ -233,13 +287,22 @@ public partial class RepoGroupViewModel : ObservableObject
         _subscriptions[item] = handler;
     }
 
-    private void Detach(RepoItemViewModel item)
+    private void Unsubscribe(RepoItemViewModel item)
     {
         if (_subscriptions.TryGetValue(item, out var handler))
         {
             item.PropertyChanged -= handler;
             _subscriptions.Remove(item);
         }
+    }
+
+    private void UnsubscribeAll()
+    {
+        foreach (var kvp in _subscriptions)
+        {
+            kvp.Key.PropertyChanged -= kvp.Value;
+        }
+        _subscriptions.Clear();
     }
 
     private List<RepoItemViewModel> SortItems(IEnumerable<RepoItemViewModel> items)
@@ -339,7 +402,7 @@ public partial class RepoGroupViewModel : ObservableObject
         if (!ShowVisibilityToggleOption)
             return;
 
-        await _generalSettingsStore.UpdateAsync(settings =>
+        await _toolsSettingsStore.UpdateAsync(settings =>
         {
             if (IsRecentSpecial)
                 settings.ShowRecent = !settings.ShowRecent;
@@ -414,6 +477,12 @@ public partial class RepoGroupViewModel : ObservableObject
         }
     }
 
+    internal void NotifyLayoutChanged()
+    {
+        OnPropertyChanged(nameof(PanelWidth));
+        OnPropertyChanged(nameof(VisibleItemCount));
+    }
+
     private void RaiseVisibilityState()
     {
         OnPropertyChanged(nameof(ShowVisibilityToggleOption));
@@ -426,3 +495,4 @@ public partial class RepoGroupViewModel : ObservableObject
         OnPropertyChanged(nameof(CanResetColor));
     }
 }
+

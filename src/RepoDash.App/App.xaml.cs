@@ -78,6 +78,7 @@ public partial class App : Application
         sc.AddSingleton<ISettingsStore<RepositoriesSettings>, JsonFileSettingsStore<RepositoriesSettings>>();
         sc.AddSingleton<ISettingsStore<ShortcutsSettings>, JsonFileSettingsStore<ShortcutsSettings>>();
         sc.AddSingleton<ISettingsStore<ColorSettings>, JsonFileSettingsStore<ColorSettings>>();
+        sc.AddSingleton<ISettingsStore<ToolsPanelSettings>, JsonFileSettingsStore<ToolsPanelSettings>>();
         sc.AddSingleton<ISettingsStore<ExternalToolsSettings>, JsonFileSettingsStore<ExternalToolsSettings>>();
 
         // window service

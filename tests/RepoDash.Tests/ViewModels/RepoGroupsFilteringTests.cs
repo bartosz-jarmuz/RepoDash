@@ -131,13 +131,23 @@ public sealed class RepoGroupsFilteringTests
     private static RepoGroupViewModel MakeGroupVm()
     {
         var general = new GeneralSettings();
-        var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
-        settings.SetupGet(s => s.Current).Returns(general);
+        var generalSource = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        generalSource.SetupGet(s => s.Current).Returns(general);
 
         var generalStore = new Mock<ISettingsStore<GeneralSettings>>();
         generalStore.SetupGet(s => s.Current).Returns(general);
         generalStore
             .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var tools = new ToolsPanelSettings();
+        var toolsSource = new Mock<IReadOnlySettingsSource<ToolsPanelSettings>>();
+        toolsSource.SetupGet(s => s.Current).Returns(tools);
+
+        var toolsStore = new Mock<ISettingsStore<ToolsPanelSettings>>();
+        toolsStore.SetupGet(s => s.Current).Returns(tools);
+        toolsStore
+            .Setup(s => s.UpdateAsync(It.IsAny<Action<ToolsPanelSettings>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var colorSettings = new ColorSettings();
@@ -147,7 +157,7 @@ public sealed class RepoGroupsFilteringTests
             .Setup(s => s.UpdateAsync(It.IsAny<Action<ColorSettings>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        return new RepoGroupViewModel(settings.Object, generalStore.Object, colorStore.Object)
+        return new RepoGroupViewModel(generalSource.Object, generalStore.Object, toolsSource.Object, toolsStore.Object, colorStore.Object)
         {
             GroupKey = "all"
         };

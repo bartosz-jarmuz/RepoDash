@@ -486,50 +486,6 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
         return null;
     }
 
-    private sealed class DropInsertionAdorner : Adorner
-    {
-        private static readonly Pen IndicatorPen;
-        private Orientation _orientation;
-        private bool _insertAfter;
-
-        static DropInsertionAdorner()
-        {
-            IndicatorPen = new Pen(Brushes.Black, 2);
-            IndicatorPen.Freeze();
-        }
-
-        public DropInsertionAdorner(UIElement adornedElement) : base(adornedElement)
-        {
-            IsHitTestVisible = false;
-        }
-
-        public void Update(Orientation orientation, bool insertAfter)
-        {
-            _orientation = orientation;
-            _insertAfter = insertAfter;
-            InvalidateVisual();
-        }
-
-        protected override void OnRender(DrawingContext drawingContext)
-        {
-            base.OnRender(drawingContext);
-
-            var size = AdornedElement.RenderSize;
-            if (size.Width <= 0 || size.Height <= 0) return;
-
-            if (_orientation == Orientation.Vertical)
-            {
-                var y = _insertAfter ? size.Height : 0;
-                drawingContext.DrawLine(IndicatorPen, new Point(0, y), new Point(size.Width, y));
-            }
-            else
-            {
-                var x = _insertAfter ? size.Width : 0;
-                drawingContext.DrawLine(IndicatorPen, new Point(x, 0), new Point(x, size.Height));
-            }
-        }
-    }
-
     private bool ShowShortcutEditor(ShortcutEntry entry, string title)
     {
         var window = new ShortcutEntryEditorWindow

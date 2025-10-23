@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RepoDash.App.Abstractions;
 using RepoDash.App.Services;
@@ -20,6 +20,8 @@ public partial class MainViewModel : ObservableObject
     private readonly IReadOnlySettingsSource<GeneralSettings> _generalSettings;
     private readonly ISettingsStore<GeneralSettings> _generalSettingsStore;
     private readonly ISettingsStore<ColorSettings> _colorSettingsStore;
+    private readonly IReadOnlySettingsSource<ToolsPanelSettings> _toolsSettings;
+    private readonly ISettingsStore<ToolsPanelSettings> _toolsSettingsStore;
     private readonly ILauncher _launcher;
     private readonly IGitService _git;
     private readonly IBranchProvider _branchProvider;
@@ -41,6 +43,8 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         IReadOnlySettingsSource<GeneralSettings> generalSettings,
         ISettingsStore<GeneralSettings> generalSettingsStore,
+        IReadOnlySettingsSource<ToolsPanelSettings> toolsSettings,
+        ISettingsStore<ToolsPanelSettings> toolsSettingsStore,
         ISettingsStore<ColorSettings> colorSettingsStore,
         ILauncher launcher,
         IGitService git,
@@ -52,6 +56,8 @@ public partial class MainViewModel : ObservableObject
     {
         _generalSettings = generalSettings;
         _generalSettingsStore = generalSettingsStore;
+        _toolsSettings = toolsSettings;
+        _toolsSettingsStore = toolsSettingsStore;
         _colorSettingsStore = colorSettingsStore;
         _launcher = launcher;
         _git = git;
@@ -64,7 +70,7 @@ public partial class MainViewModel : ObservableObject
         SearchBar = new SearchBarViewModel();
         RepoRoot = new RepoRootViewModel();
         SettingsMenu = settingsMenuVm;
-        RepoGroups = new RepoGroupsViewModel(_generalSettings, _generalSettingsStore, _colorSettingsStore);
+        RepoGroups = new RepoGroupsViewModel(_generalSettings, _generalSettingsStore, _toolsSettings, _toolsSettingsStore, _colorSettingsStore);
         GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
         StatusBar = new StatusBarViewModel();
         _gitCoordinator = new GitOperationCoordinator(_git, _launcher, StatusBar, Dispatch);
@@ -116,6 +122,12 @@ public partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(WindowTitle));
             UpdateUsageGroups();
         };
+
+        _toolsSettings.PropertyChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(ToolsSettings));
+            UpdateUsageGroups();
+        };
     }
 
     public string WindowTitle
@@ -132,6 +144,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     public GeneralSettings Settings => _generalSettings.Current;
+    public ToolsPanelSettings ToolsSettings => _toolsSettings.Current;
 
     private CancellationTokenSource? _refreshCts;
 
@@ -250,16 +263,18 @@ public partial class MainViewModel : ObservableObject
     {
         DisposeDetachedUsageItems();
 
-        var recentLimit = Math.Max(0, Settings.RecentItemsLimit);
+        var tools = _toolsSettings.Current;
+
+        var recentLimit = Math.Max(0, tools.RecentItemsLimit);
         var recentEntries = recentLimit > 0 ? _usage.GetRecent(recentLimit) : Array.Empty<RepoUsageEntry>();
         var recentItems = BuildRecentItems(recentEntries);
-        var showRecent = Settings.ShowRecent && recentLimit > 0;
+        var showRecent = tools.ShowPanel && tools.ShowRecent && recentLimit > 0;
         RepoGroups.SetRecentItems(recentItems, showRecent);
 
-        var frequentLimit = Math.Max(0, Settings.FrequentItemsLimit);
+        var frequentLimit = Math.Max(0, tools.FrequentItemsLimit);
         var frequentEntries = frequentLimit > 0 ? _usage.GetFrequent(frequentLimit) : Array.Empty<RepoUsageSummary>();
         var frequentItems = BuildFrequentItems(frequentEntries);
-        var showFrequent = Settings.ShowFrequent && frequentLimit > 0;
+        var showFrequent = tools.ShowPanel && tools.ShowFrequent && frequentLimit > 0;
         RepoGroups.SetFrequentItems(frequentItems, showFrequent);
 
         RepoGroups.RefreshPinningSettings();

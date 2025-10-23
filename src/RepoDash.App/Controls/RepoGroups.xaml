@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="RepoDash.App.Controls.RepoGroups"
+<UserControl x:Class="RepoDash.App.Controls.RepoGroups"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -17,7 +17,12 @@
   </UserControl.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <ItemsControl ItemsSource="{Binding Groups}">
+    <ItemsControl x:Name="Items" ItemsSource="{Binding Groups}"
+                  AllowDrop="True"
+                  Background="Transparent"
+                  PreviewDragOver="OnItemsPreviewDragOver"
+                  Drop="OnItemsDrop"
+                  DragLeave="OnItemsDragLeave">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <WrapPanel IsItemsHost="True"/>
@@ -26,16 +31,25 @@
 
       <ItemsControl.ItemContainerStyle>
         <Style TargetType="ContentPresenter">
-          <Setter Property="Width" Value="{Binding Settings.GroupPanelWidth}"/>
+          <Setter Property="Width">
+            <Setter.Value>
+              <Binding Path="PanelWidth" />
+            </Setter.Value>
+          </Setter>
           <Setter Property="Margin" Value="10"/>
         </Style>
       </ItemsControl.ItemContainerStyle>
 
       <ItemsControl.ItemTemplate>
         <DataTemplate>
-          <controls:RepoGroup DataContext="{Binding}"/>
+          <Border Background="Transparent"
+                  PreviewMouseLeftButtonDown="OnGroupPreviewMouseLeftButtonDown"
+                  PreviewMouseMove="OnGroupPreviewMouseMove">
+            <controls:RepoGroup DataContext="{Binding}"/>
+          </Border>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
   </ScrollViewer>
 </UserControl>
+

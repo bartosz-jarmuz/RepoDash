@@ -79,7 +79,7 @@
 
       <ListBox ItemsSource="{Binding Items}"
                ScrollViewer.VerticalScrollBarVisibility="Auto"
-               Height="{Binding Settings.ListItemVisibleCount, Converter={StaticResource ItemCountToHeight}}">
+               Height="{Binding VisibleItemCount, Converter={StaticResource ItemCountToHeight}}">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <controls:RepoItem DataContext="{Binding}" AllowPinning="{Binding DataContext.AllowPinning, RelativeSource={RelativeSource AncestorType=controls:RepoGroup}}"/>

@@ -15,6 +15,7 @@ public partial class SettingsMenuViewModel : ObservableObject
     [RelayCommand] private void OpenRepositoriesSettings() => _windows.ShowRepositories();
     [RelayCommand] private void OpenShortcutsSettings() => _windows.ShowShortcuts();
     [RelayCommand] private void OpenColorSettings() => _windows.ShowColors();
+    [RelayCommand] private void OpenToolsSettings() => _windows.ShowTools();
     [RelayCommand] private void OpenExternalToolsSettings() => _windows.ShowExternalTools();
     [RelayCommand] private void ManageBlacklistedItems() => _windows.ShowBlacklistedItems();
 }

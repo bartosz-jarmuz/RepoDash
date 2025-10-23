@@ -159,6 +159,7 @@ public sealed class JsonFileSettingsStore<TSettings> : ISettingsStore<TSettings>
             "repositoriessettings" => "repositories.json",
             "shortcutssettings" => "shortcuts.json",
             "colorsettings" => "colors.json",
+            "toolspanelsettings" => "tools.json",
             "externaltoolssettings" => "externaltools.json",
             _ => $"{type.ToLowerInvariant()}.json"
         };

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -119,8 +119,18 @@ namespace RepoDash.Tests
                 .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            var colorStore = new Mock<ISettingsStore<ColorSettings>>();
+            var tools = new ToolsPanelSettings();
+            var toolsSource = new Mock<IReadOnlySettingsSource<ToolsPanelSettings>>();
+            toolsSource.SetupGet(s => s.Current).Returns(tools);
+
+            var toolsStore = new Mock<ISettingsStore<ToolsPanelSettings>>();
+            toolsStore.SetupGet(s => s.Current).Returns(tools);
+            toolsStore
+                .Setup(s => s.UpdateAsync(It.IsAny<Action<ToolsPanelSettings>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
             var colorSettings = new ColorSettings();
+            var colorStore = new Mock<ISettingsStore<ColorSettings>>();
             colorStore.SetupGet(s => s.Current).Returns(colorSettings);
             colorStore
                 .Setup(s => s.UpdateAsync(It.IsAny<Action<ColorSettings>>(), It.IsAny<CancellationToken>()))
@@ -145,6 +155,8 @@ namespace RepoDash.Tests
             return new MainViewModel(
                 generalSource.Object,
                 generalStore.Object,
+                toolsSource.Object,
+                toolsStore.Object,
                 colorStore.Object,
                 launcher.Object,
                 git.Object,
@@ -175,3 +187,4 @@ namespace RepoDash.Tests
         }
     }
 }
+

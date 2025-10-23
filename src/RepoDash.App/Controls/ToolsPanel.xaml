@@ -1,0 +1,61 @@
+<UserControl x:Class="RepoDash.App.Controls.ToolsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:RepoDash.App.Controls"
+             xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:RepoGroupsViewModel}"
+             Loaded="OnLoaded"
+             Unloaded="OnUnloaded">
+  <Border Padding="4"
+          Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+          CornerRadius="6"
+          SnapsToDevicePixels="True">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto">
+      <DockPanel Margin="2">
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Tools &amp; Filters"
+                   FontSize="12"
+                   Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                   Margin="2,0,0,4"/>
+        <ItemsControl x:Name="Items"
+                      AllowDrop="True"
+                      Background="Transparent"
+                      ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      PreviewDragOver="OnItemsPreviewDragOver"
+                      Drop="OnItemsDrop"
+                      DragLeave="OnItemsDragLeave">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          Margin="2"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="Margin" Value="6"/>
+              <Setter Property="Width">
+                <Setter.Value>
+                  <Binding Path="Group.PanelWidth" />
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="Transparent"
+                      PreviewMouseLeftButtonDown="OnToolPreviewMouseLeftButtonDown"
+                      PreviewMouseMove="OnToolPreviewMouseMove">
+                <controls:RepoGroup DataContext="{Binding Group}"/>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </DockPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>
+

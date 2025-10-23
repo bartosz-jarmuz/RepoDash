@@ -30,7 +30,8 @@
         Value="{Binding Settings.ListItemVisibleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=1,
                   ValidatesOnExceptions=False}" Width="60"
         Height="36" Minimum="1" Maximum="300" ClipValueToMinMax="True"
-        AllowTextInput="True" />
+        AllowTextInput="True"
+        ValueChanged="OnLayoutMetricChanged" />
     </StackPanel>
 
     <!-- Panel width -->
@@ -39,7 +40,8 @@
       <xctk:IntegerUpDown Value="{Binding Settings.GroupPanelWidth,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=10,
                   ValidatesOnExceptions=False}"
                           Width="80" Height="36" Minimum="10" Maximum="900" ClipValueToMinMax="True"
-                          AllowTextInput="True"/>
+                          AllowTextInput="True"
+                          ValueChanged="OnLayoutMetricChanged"/>
     </StackPanel>
 
     <controls:RepoRoot Grid.Column="4" Margin="0,0,8,0"

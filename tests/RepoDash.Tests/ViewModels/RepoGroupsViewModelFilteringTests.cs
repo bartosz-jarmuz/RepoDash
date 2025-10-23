@@ -191,19 +191,19 @@ public sealed class RepoGroupsViewModelFilteringTests
     [Test]
     public void RecentAndFrequentRespectPinSettings()
     {
-        var general = new GeneralSettings
+        var tools = new ToolsPanelSettings
         {
             PinningAppliesToRecent = false,
             PinningAppliesToFrequent = true
         };
-        var vm = MakeGroupsVm(general);
+        var vm = MakeGroupsVm(tools: tools);
 
         var now = DateTimeOffset.UtcNow;
         var recentPinned = MakeRepoItem(@"C:\dev\recent-pinned", pinned: true, usageCount: 10, lastUsed: now);
         var recentOther = MakeRepoItem(@"C:\dev\recent-other", usageCount: 5, lastUsed: now.AddMinutes(-5));
 
         vm.SetRecentItems(new[] { recentOther, recentPinned }, isVisible: true);
-        var recentGroup = vm.Groups.Single(g => string.Equals(g.InternalKey, "__special_recent", StringComparison.OrdinalIgnoreCase));
+        var recentGroup = vm.SpecialGroups.Single(g => string.Equals(g.InternalKey, "__special_recent", StringComparison.OrdinalIgnoreCase));
         Assert.That(recentGroup.AllowPinning, Is.False);
         Assert.That(recentPinned.IsPinned, Is.True);
         Assert.That(recentGroup.Items.First().Path, Is.EqualTo(recentOther.Path));
@@ -212,21 +212,32 @@ public sealed class RepoGroupsViewModelFilteringTests
         var frequentOther = MakeRepoItem(@"C:\dev\freq-other", usageCount: 5);
 
         vm.SetFrequentItems(new[] { frequentOther, frequentPinned }, isVisible: true);
-        var frequentGroup = vm.Groups.Single(g => string.Equals(g.InternalKey, "__special_frequent", StringComparison.OrdinalIgnoreCase));
+        var frequentGroup = vm.SpecialGroups.Single(g => string.Equals(g.InternalKey, "__special_frequent", StringComparison.OrdinalIgnoreCase));
         Assert.That(frequentGroup.AllowPinning, Is.True);
         Assert.That(frequentGroup.Items.First().Path, Is.EqualTo(frequentPinned.Path));
     }
 
-    private static RepoGroupsViewModel MakeGroupsVm(GeneralSettings? general = null)
+    private static RepoGroupsViewModel MakeGroupsVm(GeneralSettings? general = null, ToolsPanelSettings? tools = null)
     {
         general ??= new GeneralSettings();
-        var settings = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
-        settings.SetupGet(s => s.Current).Returns(general);
+        tools ??= new ToolsPanelSettings();
+
+        var generalSource = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        generalSource.SetupGet(s => s.Current).Returns(general);
 
         var generalStore = new Mock<ISettingsStore<GeneralSettings>>();
         generalStore.SetupGet(s => s.Current).Returns(general);
         generalStore
             .Setup(s => s.UpdateAsync(It.IsAny<Action<GeneralSettings>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var toolsSource = new Mock<IReadOnlySettingsSource<ToolsPanelSettings>>();
+        toolsSource.SetupGet(s => s.Current).Returns(tools);
+
+        var toolsStore = new Mock<ISettingsStore<ToolsPanelSettings>>();
+        toolsStore.SetupGet(s => s.Current).Returns(tools);
+        toolsStore
+            .Setup(s => s.UpdateAsync(It.IsAny<Action<ToolsPanelSettings>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var colorSettings = new ColorSettings();
@@ -236,7 +247,7 @@ public sealed class RepoGroupsViewModelFilteringTests
             .Setup(s => s.UpdateAsync(It.IsAny<Action<ColorSettings>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        return new RepoGroupsViewModel(settings.Object, generalStore.Object, colorStore.Object);
+        return new RepoGroupsViewModel(generalSource.Object, generalStore.Object, toolsSource.Object, toolsStore.Object, colorStore.Object);
     }
 
     private static RepoItemViewModel MakeRepoItem(
@@ -328,3 +339,7 @@ public sealed class RepoGroupsViewModelFilteringTests
         private static string NormalizePath(string path) => Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 }
+
+
+
+

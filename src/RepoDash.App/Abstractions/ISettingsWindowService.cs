@@ -1,4 +1,4 @@
-﻿namespace RepoDash.App.Abstractions;
+namespace RepoDash.App.Abstractions;
 
 public interface ISettingsWindowService
 {
@@ -7,5 +7,7 @@ public interface ISettingsWindowService
     bool? ShowShortcuts();
     bool? ShowColors();
     bool? ShowExternalTools();
+    bool? ShowTools();
     bool? ShowBlacklistedItems();
 }
+

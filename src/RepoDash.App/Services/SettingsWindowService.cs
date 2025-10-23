@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.Abstractions;
 using RepoDash.App.ViewModels;
 using RepoDash.App.ViewModels.Settings;
@@ -19,6 +19,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
     public bool? ShowRepositories() => Show<RepositoriesSettings>("Repositories Settings");
     public bool? ShowShortcuts() => Show<ShortcutsSettings>("Extra Shortcuts");
     public bool? ShowColors() => Show<ColorSettings>("Color Rules");
+    public bool? ShowTools() => Show<ToolsPanelSettings>("Tools & Filters");
     public bool? ShowExternalTools() => Show<ExternalToolsSettings>("External Tools");
     public bool? ShowBlacklistedItems()
     {
