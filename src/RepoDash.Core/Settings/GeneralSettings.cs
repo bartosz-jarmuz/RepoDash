@@ -11,6 +11,11 @@ public sealed class GeneralSettings
     [Category("1. General Behavior")]
     public bool CloseToTray { get; set; } = true;
 
+    [Category("1. General Behavior")]
+    [DisplayName("Never show in taskbar")]
+    [Description("Hide RepoDash from the Windows taskbar even when the window is open.")]
+    public bool NeverShowInTaskbar { get; set; }
+
     [Category("2. User interface")]
     public int ListItemVisibleCount { get; set; } = 10;
 
@@ -67,4 +72,3 @@ public sealed class GeneralSettings
         @"(?<story>[A-Z]+-\d+)"
     };
 }
-

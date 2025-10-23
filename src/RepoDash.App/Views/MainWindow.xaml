@@ -5,6 +5,7 @@
         xmlns:behaviors="clr-namespace:RepoDash.App.Behaviors"
         xmlns:cmds="clr-namespace:RepoDash.App.Commands"
         Title="{Binding WindowTitle}"
+        ShowInTaskbar="{Binding ShowInTaskbar}"
         Width="1200"
         Height="800"
         behaviors:WindowPlacementBehavior.Cache="{StaticResource WindowPlacementCache}"

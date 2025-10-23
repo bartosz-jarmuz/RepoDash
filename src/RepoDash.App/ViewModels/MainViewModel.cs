@@ -120,6 +120,7 @@ public partial class MainViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(Settings));
             OnPropertyChanged(nameof(WindowTitle));
+            OnPropertyChanged(nameof(ShowInTaskbar));
             UpdateUsageGroups();
         };
 
@@ -145,6 +146,7 @@ public partial class MainViewModel : ObservableObject
 
     public GeneralSettings Settings => _generalSettings.Current;
     public ToolsPanelSettings ToolsSettings => _toolsSettings.Current;
+    public bool ShowInTaskbar => !_generalSettings.Current.NeverShowInTaskbar;
 
     private CancellationTokenSource? _refreshCts;
 
@@ -203,6 +205,7 @@ public partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(Settings));
         OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(ShowInTaskbar));
         UpdateUsageGroups();
     }
 
