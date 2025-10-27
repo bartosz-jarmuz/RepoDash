@@ -145,6 +145,8 @@ namespace RepoDash.Tests
             var links = new Mock<IRemoteLinkProvider>();
             var settingsWindows = new Mock<ISettingsWindowService>();
             var settingsMenuVm = new SettingsMenuViewModel(settingsWindows.Object);
+            var lifetime = new Mock<IApplicationLifetime>();
+            var aboutWindows = new Mock<IAboutWindowService>();
 
             var cacheStore = new Mock<IRepoCacheStore>();
             var cache = new RepoCacheService(cacheStore.Object, scanner.Object, branch.Object);
@@ -167,6 +169,8 @@ namespace RepoDash.Tests
                 branch.Object,
                 links.Object,
                 settingsMenuVm,
+                lifetime.Object,
+                aboutWindows.Object,
                 cache,
                 refreshService,
                 usage.Object);

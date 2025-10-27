@@ -13,10 +13,7 @@
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="Auto" />
       <ColumnDefinition Width="Auto" />
-      <ColumnDefinition Width="Auto" />
       <ColumnDefinition Width="*" />
-      <ColumnDefinition Width="Auto" />
-      <ColumnDefinition Width="Auto" />
     </Grid.ColumnDefinitions>
 
     <!-- Search (its own VM) -->
@@ -37,21 +34,19 @@
     <!-- Panel width -->
     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
       <TextBlock Text="Panel Width:" Margin="0,0,6,0" VerticalAlignment="Center" />
-      <xctk:IntegerUpDown Value="{Binding Settings.GroupPanelWidth,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=10,
-                  ValidatesOnExceptions=False}"
-                          Width="80" Height="36" Minimum="10" Maximum="900" ClipValueToMinMax="True"
-                          AllowTextInput="True"
-                          ValueChanged="OnLayoutMetricChanged"/>
+      <Slider Width="140"
+              Minimum="10"
+              Maximum="900"
+              TickFrequency="1"
+              IsSnapToTickEnabled="True"
+              SmallChange="1"
+              LargeChange="10"
+              Value="{Binding Settings.GroupPanelWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+              ValueChanged="OnPanelWidthChanged"/>
+      <TextBlock Text="{Binding Settings.GroupPanelWidth}" Margin="6,0,0,0" VerticalAlignment="Center" />
     </StackPanel>
 
-    <controls:RepoRoot Grid.Column="4" Margin="0,0,8,0"
+    <controls:RepoRoot Grid.Column="3" Margin="0,0,8,0"
                        DataContext="{Binding RepoRoot}" />
-
-    <controls:GlobalGitOperationsMenu Grid.Column="5" VerticalAlignment="Center"
-                                      DataContext="{Binding GlobalGitOperations}" />
-
-    <!-- Settings / Git menu (its own VM) -->
-    <controls:SettingsMenu Grid.Column="6" VerticalAlignment="Center"
-                           DataContext="{Binding SettingsMenu}" />
   </Grid>
 </UserControl>

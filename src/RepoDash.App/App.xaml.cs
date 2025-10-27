@@ -84,6 +84,9 @@ public partial class App : Application
 
         // window service
         sc.AddSingleton<ISettingsWindowService, SettingsWindowService>();
+        sc.AddSingleton<IApplicationLifetime, ApplicationLifetime>();
+        sc.AddTransient<IAboutWindowService, AboutWindowService>();
+        sc.AddTransient<AboutViewModel>();
         sc.AddSingleton<IWindowPlacementCache, JsonWindowPlacementCache>();
 
 

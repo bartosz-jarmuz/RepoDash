@@ -39,6 +39,7 @@ public partial class MainViewModel : ObservableObject
     public SettingsMenuViewModel SettingsMenu { get; }
     public RepoGroupsViewModel RepoGroups { get; }
     public GlobalGitOperationsMenuViewModel GlobalGitOperations { get; }
+    public MainMenuViewModel MainMenu { get; }
     public StatusBarViewModel StatusBar { get; }
 
     public MainViewModel(
@@ -52,6 +53,8 @@ public partial class MainViewModel : ObservableObject
         IBranchProvider branchProvider,
         IRemoteLinkProvider links,
         SettingsMenuViewModel settingsMenuVm,
+        IApplicationLifetime applicationLifetime,
+        IAboutWindowService aboutWindowService,
         RepoCacheService cacheService,
         RepoStatusRefreshService statusRefreshService,
         IRepoUsageService usage)
@@ -75,6 +78,7 @@ public partial class MainViewModel : ObservableObject
         SettingsMenu = settingsMenuVm;
         RepoGroups = new RepoGroupsViewModel(_generalSettings, _generalSettingsStore, _toolsSettings, _toolsSettingsStore, _colorSettingsStore);
         GlobalGitOperations = new GlobalGitOperationsMenuViewModel();
+        MainMenu = new MainMenuViewModel(SettingsMenu, GlobalGitOperations, applicationLifetime, aboutWindowService, _launcher);
         StatusBar = new StatusBarViewModel();
         StatusBar.SetLastRefresh(_statusRefresh.GetLastRefresh(_generalSettings.Current.RepoRoot));
         _gitCoordinator = new GitOperationCoordinator(_git, _launcher, StatusBar, Dispatch);

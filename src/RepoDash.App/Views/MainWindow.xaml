@@ -24,6 +24,8 @@
   </Window.InputBindings>
   <DockPanel>
     <!-- Top bar should be first so left/right panels sit beneath it -->
+    <controls:MainMenu DockPanel.Dock="Top"
+                       DataContext="{Binding MainMenu}" />
     <controls:TopBar DockPanel.Dock="Top" DataContext="{Binding}" Margin="10"/>
     <!-- Status bar at the bottom -->
     <controls:StatusBar DockPanel.Dock="Bottom" DataContext="{Binding StatusBar}" />

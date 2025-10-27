@@ -1,0 +1,37 @@
+<UserControl x:Class="RepoDash.App.Controls.MainMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:MainMenuViewModel}">
+  <Menu>
+    <MenuItem Header="_File">
+      <MenuItem Header="Open _Working Directory" Command="{Binding OpenWorkingFolderCommand}" />
+      <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
+    </MenuItem>
+
+    <MenuItem Header="_Git">
+      <MenuItem Header="_Force status refresh" Command="{Binding Git.GitRefreshStatusesCommand}" />
+      <MenuItem Header="_Fetch all" Command="{Binding Git.GitFetchAllCommand}" />
+      <MenuItem Header="Pull all (_merge)" Command="{Binding Git.GitPullAllCommand}" />
+      <MenuItem Header="Pull all (_rebase)" Command="{Binding Git.GitPullRebaseAllCommand}" />
+    </MenuItem>
+
+    <MenuItem Header="_Settings">
+      <MenuItem Header="_General" Command="{Binding Settings.OpenGeneralSettingsCommand}" />
+      <MenuItem Header="_Repositories" Command="{Binding Settings.OpenRepositoriesSettingsCommand}" />
+      <MenuItem Header="Short_cuts" Command="{Binding Settings.OpenShortcutsSettingsCommand}" />
+      <MenuItem Header="_Colors" Command="{Binding Settings.OpenColorSettingsCommand}" />
+      <MenuItem Header="_Tools &amp; Filters" Command="{Binding Settings.OpenToolsSettingsCommand}" />
+      <MenuItem Header="_External Tools" Command="{Binding Settings.OpenExternalToolsSettingsCommand}" />
+      <Separator />
+      <MenuItem Header="_Manage Blacklisted Items" Command="{Binding Settings.ManageBlacklistedItemsCommand}" />
+    </MenuItem>
+
+    <MenuItem Header="_Help">
+      <MenuItem Header="_About RepoDash" Command="{Binding ShowAboutCommand}" />
+    </MenuItem>
+  </Menu>
+</UserControl>

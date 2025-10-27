@@ -13,4 +13,9 @@ public partial class TopBar : UserControl
     {
         LayoutRefreshCoordinator.Default.Refresh();
     }
+
+    private void OnPanelWidthChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        LayoutRefreshCoordinator.Default.Refresh();
+    }
 }

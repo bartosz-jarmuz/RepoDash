@@ -150,6 +150,10 @@
         <Separator/>
         <MenuItem Header="Copy Name" Command="{Binding CopyNameCommand}"/>
         <MenuItem Header="Copy Path" Command="{Binding CopyPathCommand}"/>
+        <MenuItem Header="Copy Branch Name" Command="{Binding CopyBranchNameCommand}"/>
+        <MenuItem Header="Copy Story Number"
+                  Command="{Binding CopyStoryReferenceCommand}"
+                  Visibility="{Binding HasStoryLink, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         <Separator/>
         <MenuItem Header="Pin" Command="{Binding TogglePinCommand}" IsCheckable="True" IsChecked="{Binding IsPinned, Mode=OneWay}"/>
         <MenuItem Header="Hide from recent/frequent" Command="{Binding ToggleBlacklistCommand}"/>

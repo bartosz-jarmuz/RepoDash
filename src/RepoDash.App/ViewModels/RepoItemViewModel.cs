@@ -356,6 +356,28 @@ public partial class RepoItemViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void CopyPath() => System.Windows.Clipboard.SetText(Path);
 
+    [RelayCommand(CanExecute = nameof(CanCopyBranchName))]
+    private void CopyBranchName()
+    {
+        if (!string.IsNullOrWhiteSpace(CurrentBranch))
+        {
+            System.Windows.Clipboard.SetText(CurrentBranch);
+        }
+    }
+
+    private bool CanCopyBranchName() => !string.IsNullOrWhiteSpace(CurrentBranch);
+
+    [RelayCommand(CanExecute = nameof(CanCopyStoryReference))]
+    private void CopyStoryReference()
+    {
+        if (!string.IsNullOrWhiteSpace(StoryReference))
+        {
+            System.Windows.Clipboard.SetText(StoryReference);
+        }
+    }
+
+    private bool CanCopyStoryReference() => HasStoryLink;
+
     [RelayCommand]
     private void TogglePin()
     {
