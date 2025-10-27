@@ -17,6 +17,7 @@ public partial class RepoGroups : UserControl
     private FrameworkElement? _dropIndicatorElement;
     private DropInsertionAdorner? _dropIndicator;
     private AdornerLayer? _dropIndicatorLayer;
+    private bool _dragOriginIsHeader;
 
     public RepoGroups()
     {
@@ -29,19 +30,17 @@ public partial class RepoGroups : UserControl
     private void OnGroupPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = null;
-        if (IsScrollComponent(e.OriginalSource)) return;
+        _dragOriginIsHeader = false;
+        if (sender is not Border border) return;
+        if (!IsHeaderDragHit(border, e.OriginalSource, e.GetPosition(border))) return;
         _dragStartPoint = e.GetPosition(null);
+        _dragOriginIsHeader = true;
     }
 
     private void OnGroupPreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (IsScrollComponent(e.OriginalSource))
-        {
-            _dragStartPoint = null;
-            return;
-        }
         if (e.LeftButton != MouseButtonState.Pressed) return;
-        if (_dragStartPoint is null) return;
+        if (!_dragOriginIsHeader || _dragStartPoint is null) return;
 
         var position = e.GetPosition(null);
         var start = _dragStartPoint.Value;
@@ -53,6 +52,7 @@ public partial class RepoGroups : UserControl
         }
 
         _dragStartPoint = null;
+        _dragOriginIsHeader = false;
 
         if (sender is Border border && border.DataContext is RepoGroupViewModel group)
         {
@@ -88,6 +88,7 @@ public partial class RepoGroups : UserControl
     private async void OnItemsDrop(object sender, DragEventArgs e)
     {
         _dragStartPoint = null;
+        _dragOriginIsHeader = false;
         HideDropIndicator();
         e.Handled = true;
 
@@ -222,20 +223,67 @@ public partial class RepoGroups : UserControl
         _dropIndicatorLayer = null;
     }
 
-    private static bool IsScrollComponent(object? origin)
-    {
-        if (origin is not DependencyObject dep) return false;
+    private static bool IsScrollComponent(object? origin) =>
+        origin is DependencyObject dep && FindAncestor<ScrollBar>(dep) is not null;
 
-        while (dep is not null)
+    private bool IsHeaderDragHit(Border container, object? origin, Point containerPosition)
+    {
+        if (IsScrollComponent(origin)) return false;
+        if (origin is DependencyObject dep && FindAncestor<ButtonBase>(dep) is not null)
+            return false;
+
+        if (container.Child is not RepoGroup group) return true;
+        if (group.FindName("HeaderDragHandle") is not FrameworkElement header || header.ActualHeight <= 0)
+            return true;
+
+        try
         {
-            if (dep is ScrollBar or ScrollViewer)
-                return true;
-            if (dep is Visual or Visual3D)
-                dep = VisualTreeHelper.GetParent(dep);
-            else
-                return false;
+            var headerTopLeft = header.TranslatePoint(new Point(0, 0), container);
+            var headerRect = new Rect(headerTopLeft, new Size(header.ActualWidth, header.ActualHeight));
+            if (headerRect.Contains(containerPosition)) return true;
+
+            if (origin is DependencyObject originDep)
+            {
+                return IsDescendantOf(originDep, header);
+            }
+
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return true;
+        }
+    }
+
+    private static bool IsDescendantOf(DependencyObject node, DependencyObject ancestor)
+    {
+        var current = node;
+        while (current is not null)
+        {
+            if (ReferenceEquals(current, ancestor)) return true;
+            current = GetVisualOrLogicalParent(current);
         }
 
         return false;
     }
+
+    private static T? FindAncestor<T>(DependencyObject? origin) where T : DependencyObject
+    {
+        var current = origin;
+        while (current is not null)
+        {
+            if (current is T match) return match;
+            current = GetVisualOrLogicalParent(current);
+        }
+
+        return null;
+    }
+
+    private static DependencyObject? GetVisualOrLogicalParent(DependencyObject node) =>
+        node switch
+        {
+            Visual or Visual3D => VisualTreeHelper.GetParent(node),
+            FrameworkContentElement fce => fce.Parent,
+            _ => null
+        };
 }
