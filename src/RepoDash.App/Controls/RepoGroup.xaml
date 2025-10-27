@@ -79,6 +79,9 @@
 
       <ListBox ItemsSource="{Binding Items}"
                ScrollViewer.VerticalScrollBarVisibility="Auto"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               HorizontalContentAlignment="Stretch"
+               ClipToBounds="True"
                Height="{Binding VisibleItemCount, Converter={StaticResource ItemCountToHeight}}">
         <ListBox.ItemTemplate>
           <DataTemplate>

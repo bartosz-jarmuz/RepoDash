@@ -1,3 +1,5 @@
+using System.Windows.Media.Media3D;
+
 namespace RepoDash.App.Controls;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +16,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -29,14 +32,22 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
     private ObservableCollection<RepoGroupViewModel>? _specialGroups;
 
     private Point? _dragStartPoint;
-    private FrameworkElement? _dropIndicatorElement;
-    private DropInsertionAdorner? _dropIndicator;
-    private AdornerLayer? _dropIndicatorLayer;
+   private FrameworkElement? _dropIndicatorElement;
+   private DropInsertionAdorner? _dropIndicator;
+   private AdornerLayer? _dropIndicatorLayer;
+    private ToolsPanelPlacement _currentPlacement = ToolsPanelPlacement.Left;
+    private double _lastPersistedWidth = DefaultPanelWidth;
+    private bool _isResizeEnabled;
+
+    private const double DefaultPanelWidth = 320;
+    private const double MinPanelWidth = 200;
+    private const double MaxPanelWidth = 620;
 
     public ToolsPanel()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        SizeChanged += OnPanelSizeChanged;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -44,6 +55,17 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
     public ObservableCollection<ToolDisplayItem> DisplayItems { get; } = new();
 
     public Orientation ItemsOrientation { get; private set; } = Orientation.Vertical;
+
+    public bool IsResizeEnabled
+    {
+        get => _isResizeEnabled;
+        private set
+        {
+            if (_isResizeEnabled == value) return;
+            _isResizeEnabled = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsResizeEnabled)));
+        }
+    }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -58,12 +80,16 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
 
         HookRepoGroups(DataContext as RepoGroupsViewModel);
 
+        PanelBorder.SizeChanged += OnPanelBorderSizeChanged;
+
         _initialized = true;
         RefreshFromSettings();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        PanelBorder.SizeChanged -= OnPanelBorderSizeChanged;
+
         if (_settingsSource is not null)
         {
             _settingsSource.PropertyChanged -= OnSettingsChanged;
@@ -157,18 +183,26 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
         if (_settingsSource?.Current is null) return;
 
         ApplyPlacement(_settingsSource.Current.Placement);
+        ApplyPanelWidth(_settingsSource.Current.PanelWidth);
         UpdateVisibility(_settingsSource.Current.ShowPanel);
         RebuildItems();
     }
 
     private void ApplyPlacement(ToolsPanelPlacement placement)
     {
-        ItemsOrientation = placement switch
+        _currentPlacement = placement;
+
+        var orientation = placement switch
         {
             ToolsPanelPlacement.Top or ToolsPanelPlacement.Bottom => Orientation.Horizontal,
             _ => Orientation.Vertical
         };
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemsOrientation)));
+
+        if (ItemsOrientation != orientation)
+        {
+            ItemsOrientation = orientation;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemsOrientation)));
+        }
 
         var dock = placement switch
         {
@@ -180,6 +214,34 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
         };
 
         DockPanel.SetDock(this, dock);
+
+        var isVertical = IsVerticalPlacement();
+        IsResizeEnabled = isVertical;
+
+        if (isVertical)
+        {
+            MinWidth = MinPanelWidth;
+            MaxWidth = MaxPanelWidth;
+        }
+        else
+        {
+            Width = double.NaN;
+            MinWidth = 0;
+            MaxWidth = double.PositiveInfinity;
+        }
+
+        UpdateResizeThumbAlignment();
+    }
+
+    private void ApplyPanelWidth(double width)
+    {
+        var clamped = ClampWidth(width);
+        _lastPersistedWidth = clamped;
+
+        if (!IsVerticalPlacement())
+            return;
+
+        Width = clamped;
     }
 
     private void UpdateVisibility(bool isVisible)
@@ -209,6 +271,107 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
         }
     }
 
+    private void OnPanelSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (!_initialized) return;
+        if (!IsVerticalPlacement()) return;
+        if (!e.WidthChanged) return;
+
+        var width = ClampWidth(e.NewSize.Width);
+        if (Math.Abs(width - (double.IsNaN(Width) ? width : Width)) > 0.5)
+        {
+            Width = width;
+        }
+    }
+
+    private void OnPanelBorderSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateResizeThumbAlignment();
+    }
+
+    private static bool IsScrollComponent(object? origin)
+    {
+        if (origin is not DependencyObject dep) return false;
+
+        while (dep is not null)
+        {
+            if (dep is ScrollBar or ScrollViewer)
+                return true;
+            if (dep is Visual or Visual3D)
+                dep = VisualTreeHelper.GetParent(dep);
+            else
+                return false;
+        }
+
+        return false;
+    }
+
+    private void OnResizeThumbDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (!IsResizeEnabled) return;
+
+        var delta = e.HorizontalChange;
+        if (_currentPlacement == ToolsPanelPlacement.Right)
+        {
+            delta = -delta;
+        }
+
+        if (Math.Abs(delta) < double.Epsilon) return;
+
+        var currentWidth = double.IsNaN(Width) ? ActualWidth : Width;
+        if (double.IsNaN(currentWidth) || currentWidth <= 0)
+        {
+            currentWidth = _lastPersistedWidth;
+        }
+
+        var target = ClampWidth(currentWidth + delta);
+        Width = target;
+    }
+
+    private async void OnResizeThumbDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (!IsResizeEnabled || _settingsStore is null) return;
+
+        var width = ClampWidth(double.IsNaN(Width) ? ActualWidth : Width);
+        if (Math.Abs(width - _lastPersistedWidth) < 0.5) return;
+
+        _lastPersistedWidth = width;
+        await _settingsStore.UpdateAsync(settings => settings.PanelWidth = width);
+    }
+
+    private bool IsVerticalPlacement()
+        => _currentPlacement == ToolsPanelPlacement.Left || _currentPlacement == ToolsPanelPlacement.Right;
+
+    private void UpdateResizeThumbAlignment()
+    {
+        if (PanelBorder is null || ResizeThumb is null) return;
+
+        if (IsVerticalPlacement())
+        {
+            var thumbColumn = _currentPlacement == ToolsPanelPlacement.Right ? 0 : 1;
+            var panelColumn = thumbColumn == 0 ? 1 : 0;
+
+            Grid.SetColumnSpan(PanelBorder, 1);
+            Grid.SetColumn(PanelBorder, panelColumn);
+            Grid.SetColumn(ResizeThumb, thumbColumn);
+        }
+        else
+        {
+            Grid.SetColumn(PanelBorder, 0);
+            Grid.SetColumnSpan(PanelBorder, 2);
+            Grid.SetColumn(ResizeThumb, 1);
+        }
+    }
+
+    private static double ClampWidth(double width)
+    {
+        if (double.IsNaN(width) || double.IsInfinity(width) || width <= 0)
+            return DefaultPanelWidth;
+        if (width < MinPanelWidth) return MinPanelWidth;
+        if (width > MaxPanelWidth) return MaxPanelWidth;
+        return width;
+    }
+
     private static IReadOnlyList<string> BuildOrderedKeys(ToolsPanelSettings settings, IEnumerable<RepoGroupViewModel> groups)
     {
         var ordered = new List<string>();
@@ -232,11 +395,18 @@ public partial class ToolsPanel : UserControl, INotifyPropertyChanged
 
     private void OnToolPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _dragStartPoint = null;
+        if (IsScrollComponent(e.OriginalSource)) return;
         _dragStartPoint = e.GetPosition(null);
     }
 
     private void OnToolPreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (IsScrollComponent(e.OriginalSource))
+        {
+            _dragStartPoint = null;
+            return;
+        }
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (_dragStartPoint is null) return;
 

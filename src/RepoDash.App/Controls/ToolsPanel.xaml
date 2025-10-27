@@ -5,57 +5,98 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:RepoDash.App.Controls"
              xmlns:vm="clr-namespace:RepoDash.App.ViewModels"
+             xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:RepoGroupsViewModel}"
              Loaded="OnLoaded"
              Unloaded="OnUnloaded">
-  <Border Padding="4"
-          Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-          CornerRadius="6"
-          SnapsToDevicePixels="True">
-    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Auto">
-      <DockPanel Margin="2">
-        <TextBlock DockPanel.Dock="Top"
-                   Text="Tools &amp; Filters"
-                   FontSize="12"
-                   Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
-                   Margin="2,0,0,4"/>
-        <ItemsControl x:Name="Items"
-                      AllowDrop="True"
-                      Background="Transparent"
-                      ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                      PreviewDragOver="OnItemsPreviewDragOver"
-                      Drop="OnItemsDrop"
-                      DragLeave="OnItemsDragLeave">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                          Margin="2"/>
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    <Style x:Key="PanelResizeThumbStyle" TargetType="primitives:Thumb">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="primitives:Thumb">
+            <Border Background="{TemplateBinding Background}">
+              <Border HorizontalAlignment="Center"
+                      Width="1"
+                      Margin="0,3"
+                      CornerRadius="1"
+                      Background="LightGray"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/>
+    </Grid.ColumnDefinitions>
+
+    <Border x:Name="PanelBorder"
+            Grid.Column="0"
+            Padding="4"
+            Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+            CornerRadius="6"
+            SnapsToDevicePixels="True"
+            ClipToBounds="True">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+        <DockPanel Margin="2">
+          <TextBlock DockPanel.Dock="Top"
+                     Text="Tools &amp; Filters"
+                     FontSize="12"
+                     Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                     Margin="2,0,0,4"/>
+          <ItemsControl x:Name="Items"
+                        AllowDrop="True"
+                        Background="Transparent"
+                        ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        PreviewDragOver="OnItemsPreviewDragOver"
+                        Drop="OnItemsDrop"
+                        DragLeave="OnItemsDragLeave">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="{Binding ItemsOrientation, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Margin="2"/>
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemContainerStyle>
             <Style TargetType="ContentPresenter">
               <Setter Property="Margin" Value="6"/>
-              <Setter Property="Width">
+              <Setter Property="HorizontalAlignment" Value="Stretch"/>
+              <Setter Property="MaxWidth">
                 <Setter.Value>
-                  <Binding Path="Group.PanelWidth" />
+                  <Binding ElementName="PanelBorder" Path="ActualWidth"/>
                 </Setter.Value>
               </Setter>
             </Style>
           </ItemsControl.ItemContainerStyle>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate>
-              <Border Background="Transparent"
-                      PreviewMouseLeftButtonDown="OnToolPreviewMouseLeftButtonDown"
-                      PreviewMouseMove="OnToolPreviewMouseMove">
-                <controls:RepoGroup DataContext="{Binding Group}"/>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </DockPanel>
-    </ScrollViewer>
-  </Border>
-</UserControl>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="Transparent"
+                        PreviewMouseLeftButtonDown="OnToolPreviewMouseLeftButtonDown"
+                        PreviewMouseMove="OnToolPreviewMouseMove">
+                  <controls:RepoGroup DataContext="{Binding Group}"/>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </DockPanel>
+      </ScrollViewer>
+    </Border>
 
+    <primitives:Thumb x:Name="ResizeThumb"
+                      Grid.Column="1"
+                      Width="8"
+                      VerticalAlignment="Stretch"
+                      Cursor="SizeWE"
+                      Style="{StaticResource PanelResizeThumbStyle}"
+                      DragDelta="OnResizeThumbDragDelta"
+                      DragCompleted="OnResizeThumbDragCompleted"
+                      Visibility="{Binding IsResizeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}"/>
+  </Grid>
+</UserControl>

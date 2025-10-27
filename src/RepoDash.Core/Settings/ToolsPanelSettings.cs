@@ -15,6 +15,11 @@ public sealed class ToolsPanelSettings
     [DisplayName("Placement")]
     public ToolsPanelPlacement Placement { get; set; } = ToolsPanelPlacement.Left;
 
+    [Category("Panel")]
+    [DisplayName("Panel width")]
+    [Description("Stored width for the tools panel when docked vertically.")]
+    public double PanelWidth { get; set; } = 320;
+
     [Category("Tools")]
     [DisplayName("Show Recent list")]
     public bool ShowRecent { get; set; } = true;

@@ -140,4 +140,35 @@ public sealed class RepoGroupViewModelTests
 
         CollectionAssert.Contains(raised, nameof(RepoGroupViewModel.VisibleItemCount));
     }
+
+    [Test]
+    public void PanelWidth_UsesToolsWidthForSpecialGroup()
+    {
+        var general = new GeneralSettings { GroupPanelWidth = 420 };
+        var tools = new ToolsPanelSettings { PanelWidth = 180 };
+
+        var generalSource = new Mock<IReadOnlySettingsSource<GeneralSettings>>();
+        generalSource.SetupGet(s => s.Current).Returns(general);
+
+        var generalStore = new Mock<ISettingsStore<GeneralSettings>>();
+        generalStore.SetupGet(s => s.Current).Returns(general);
+
+        var toolsSource = new Mock<IReadOnlySettingsSource<ToolsPanelSettings>>();
+        toolsSource.SetupGet(s => s.Current).Returns(tools);
+
+        var toolsStore = new Mock<ISettingsStore<ToolsPanelSettings>>();
+        toolsStore.SetupGet(s => s.Current).Returns(tools);
+
+        var colorSettings = new ColorSettings();
+        var colorStore = new Mock<ISettingsStore<ColorSettings>>();
+        colorStore.SetupGet(s => s.Current).Returns(colorSettings);
+
+        var vm = new RepoGroupViewModel(generalSource.Object, generalStore.Object, toolsSource.Object, toolsStore.Object, colorStore.Object)
+        {
+            InternalKey = "__special_recent",
+            IsSpecial = true
+        };
+
+        Assert.That(vm.PanelWidth, Is.EqualTo(180));
+    }
 }

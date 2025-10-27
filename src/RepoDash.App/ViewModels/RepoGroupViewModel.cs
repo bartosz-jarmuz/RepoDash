@@ -111,7 +111,19 @@ public partial class RepoGroupViewModel : ObservableObject
 
     public ToolsPanelSettings ToolsSettings => _toolsSettings.Current;
 
-    public int PanelWidth => Settings.GroupPanelWidth;
+    public int PanelWidth
+    {
+        get
+        {
+            if (IsSpecial)
+            {
+                var width = Math.Max(120, _toolsSettings.Current.PanelWidth);
+                return (int)Math.Round(width);
+            }
+
+            return Settings.GroupPanelWidth;
+        }
+    }
 
     public int VisibleItemCount
     {

@@ -1,4 +1,6 @@
-﻿namespace RepoDash.App.Controls;
+﻿using System.Windows.Media.Media3D;
+
+namespace RepoDash.App.Controls;
 
 using Microsoft.Extensions.DependencyInjection;
 using RepoDash.App.Abstractions;
@@ -13,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Threading.Tasks;
 using System.Windows.Documents;
@@ -30,10 +33,23 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
     private FrameworkElement? _dropIndicatorElement;
     private DropInsertionAdorner? _dropIndicator;
     private AdornerLayer? _dropIndicatorLayer;
+    private ShortcutsPanelPlacement _currentPlacement = ShortcutsPanelPlacement.Left;
+    private double _lastPersistedWidth = DefaultPanelWidth;
+    private double _baseIconSize = 28;
+    private double _baseGlyphSize = 16;
+    private double _baseLabelWidth = 96;
+    private double _baseLabelFontSize = 12;
+    private bool _isResizeEnabled;
+
+    private const double DefaultPanelWidth = 148;
+    private const double MinPanelWidth = 64;
+    private const double MaxPanelWidth = 148;
+    private const double MinScale = 0.45;
 
     public ShortcutsPanel()
     {
         InitializeComponent();
+        SizeChanged += OnPanelSizeChanged;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -42,11 +58,39 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
 
     public Orientation ItemsOrientation { get; private set; } = Orientation.Vertical;
 
-    public double IconPixelSize { get; private set; } = 32;
+    private double _iconPixelSize = 32;
+    public double IconPixelSize
+    {
+        get => _iconPixelSize;
+        private set => SetDoubleField(ref _iconPixelSize, value, nameof(IconPixelSize));
+    }
 
-    public double GlyphFontSize { get; private set; } = 16;
+    private double _glyphFontSize = 16;
+    public double GlyphFontSize
+    {
+        get => _glyphFontSize;
+        private set => SetDoubleField(ref _glyphFontSize, value, nameof(GlyphFontSize));
+    }
 
-    public double MaxLabelWidth { get; private set; } = 96;
+    private double _maxLabelWidth = 96;
+    public double MaxLabelWidth
+    {
+        get => _maxLabelWidth;
+        private set => SetDoubleField(ref _maxLabelWidth, value, nameof(MaxLabelWidth));
+    }
+
+    private double _labelFontSize = 12;
+    public double LabelFontSize
+    {
+        get => _labelFontSize;
+        private set => SetDoubleField(ref _labelFontSize, value, nameof(LabelFontSize));
+    }
+
+    public bool IsResizeEnabled
+    {
+        get => _isResizeEnabled;
+        private set => SetBoolField(ref _isResizeEnabled, value, nameof(IsResizeEnabled));
+    }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -62,11 +106,15 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
         _src.PropertyChanged += OnSettingsChanged;
         _initialized = true;
 
+        PanelBorder.SizeChanged += OnPanelBorderSizeChanged;
+
         RefreshFromSettings();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        PanelBorder.SizeChanged -= OnPanelBorderSizeChanged;
+
         if (_src is not null)
         {
             _src.PropertyChanged -= OnSettingsChanged;
@@ -95,6 +143,7 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
 
         ApplyPlacement(cur.Placement);
         ApplyItemSize(cur.ItemSize);
+        ApplyPanelWidth(cur.PanelWidth);
         RebuildItems(cur);
 
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayItems)));
@@ -102,9 +151,17 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
 
     private void ApplyPlacement(ShortcutsPanelPlacement placement)
     {
-        ItemsOrientation = (placement == ShortcutsPanelPlacement.Top || placement == ShortcutsPanelPlacement.Bottom)
-            ? Orientation.Horizontal : Orientation.Vertical;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemsOrientation)));
+        _currentPlacement = placement;
+
+        var orientation = (placement == ShortcutsPanelPlacement.Top || placement == ShortcutsPanelPlacement.Bottom)
+            ? Orientation.Horizontal
+            : Orientation.Vertical;
+
+        if (ItemsOrientation != orientation)
+        {
+            ItemsOrientation = orientation;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemsOrientation)));
+        }
 
         var dock = placement switch
         {
@@ -114,24 +171,63 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
             ShortcutsPanelPlacement.Right => Dock.Right,
             _ => Dock.Left
         };
+
         DockPanel.SetDock(this, dock);
+
+        var isVertical = IsVerticalPlacement();
+        IsResizeEnabled = isVertical;
+
+        if (isVertical)
+        {
+            MinWidth = MinPanelWidth;
+            MaxWidth = MaxPanelWidth;
+        }
+        else
+        {
+            Width = double.NaN;
+            MinWidth = 0;
+            MaxWidth = double.PositiveInfinity;
+        }
+
+        UpdateResizeThumbPlacement();
     }
 
     private void ApplyItemSize(ShortcutsItemSize size)
     {
-        IconPixelSize = size switch
+        _baseIconSize = size switch
         {
             ShortcutsItemSize.Small => 20,
             ShortcutsItemSize.Medium => 28,
             ShortcutsItemSize.Large => 40,
             _ => 28
         };
-        GlyphFontSize = Math.Round(IconPixelSize * 0.6, MidpointRounding.AwayFromZero);
-        MaxLabelWidth = IconPixelSize * 3.2;
 
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IconPixelSize)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(GlyphFontSize)));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MaxLabelWidth)));
+        _baseGlyphSize = Math.Round(_baseIconSize * 0.6, MidpointRounding.AwayFromZero);
+        _baseLabelWidth = _baseIconSize * 3.2;
+        _baseLabelFontSize = size switch
+        {
+            ShortcutsItemSize.Small => 11,
+            ShortcutsItemSize.Medium => 12,
+            ShortcutsItemSize.Large => 14,
+            _ => 12
+        };
+
+        UpdateAdaptiveSizing(GetEffectiveWidthForSizing());
+    }
+
+    private void ApplyPanelWidth(double width)
+    {
+        var clamped = ClampWidth(width);
+        _lastPersistedWidth = clamped;
+
+        if (!IsVerticalPlacement())
+        {
+            UpdateAdaptiveSizing(GetEffectiveWidthForSizing());
+            return;
+        }
+
+        Width = clamped;
+        UpdateAdaptiveSizing(clamped);
     }
 
     private void RebuildItems(ShortcutsSettings s)
@@ -155,6 +251,163 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
                 FallbackGlyph = ComputeFallbackGlyph(name)
             });
         }
+    }
+
+    private void OnPanelSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (!_initialized) return;
+        if (e.WidthChanged)
+        {
+            var width = IsVerticalPlacement()
+                ? ClampWidth(e.NewSize.Width)
+                : Math.Min(MaxPanelWidth, e.NewSize.Width);
+            UpdateAdaptiveSizing(width);
+        }
+    }
+
+    private void OnResizeThumbDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (!IsResizeEnabled) return;
+
+        var delta = e.HorizontalChange;
+        if (_currentPlacement == ShortcutsPanelPlacement.Right)
+        {
+            delta = -delta;
+        }
+
+        if (Math.Abs(delta) < double.Epsilon) return;
+
+        var target = ClampWidth(GetEffectiveWidth() + delta);
+        Width = target;
+        UpdateAdaptiveSizing(target);
+    }
+
+    private async void OnResizeThumbDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (!IsResizeEnabled || _store is null) return;
+
+        var width = ClampWidth(GetEffectiveWidth());
+        if (Math.Abs(width - _lastPersistedWidth) < 0.5) return;
+
+        _lastPersistedWidth = width;
+        await _store.UpdateAsync(settings => settings.PanelWidth = width);
+    }
+
+    private bool IsVerticalPlacement()
+        => _currentPlacement == ShortcutsPanelPlacement.Left || _currentPlacement == ShortcutsPanelPlacement.Right;
+
+    private double GetEffectiveWidthForSizing()
+    {
+        if (IsVerticalPlacement())
+        {
+            return ClampWidth(GetEffectiveWidth());
+        }
+
+        var actual = ActualWidth;
+        if (double.IsNaN(actual) || actual <= 0)
+            return MaxPanelWidth;
+        return Math.Min(MaxPanelWidth, actual);
+    }
+
+    private double GetEffectiveWidth()
+    {
+        var width = double.IsNaN(Width) ? ActualWidth : Width;
+        if (double.IsNaN(width) || width <= 0)
+            width = _lastPersistedWidth;
+        return width;
+    }
+
+    private void UpdateResizeThumbAlignment()
+    {
+        UpdateResizeThumbPlacement();
+    }
+
+    private void UpdateResizeThumbPlacement()
+    {
+        if (PanelBorder is null || ResizeThumb is null) return;
+
+        if (IsVerticalPlacement())
+        {
+            var thumbColumn = _currentPlacement == ShortcutsPanelPlacement.Right ? 0 : 1;
+            var panelColumn = thumbColumn == 0 ? 1 : 0;
+
+            Grid.SetColumnSpan(PanelBorder, 1);
+            Grid.SetColumn(PanelBorder, panelColumn);
+            Grid.SetColumn(ResizeThumb, thumbColumn);
+        }
+        else
+        {
+            Grid.SetColumn(PanelBorder, 0);
+            Grid.SetColumnSpan(PanelBorder, 2);
+            Grid.SetColumn(ResizeThumb, 1);
+        }
+    }
+
+    private void OnPanelBorderSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateResizeThumbPlacement();
+    }
+
+    private static bool IsScrollComponent(object? origin)
+    {
+        if (origin is not DependencyObject dep) return false;
+
+        while (dep is not null)
+        {
+            if (dep is ScrollBar or ScrollViewer)
+                return true;
+            if (dep is Visual or Visual3D)
+                dep = VisualTreeHelper.GetParent(dep);
+            else
+                return false;
+        }
+
+        return false;
+    }
+
+    private static double ClampWidth(double width)
+    {
+        if (double.IsNaN(width) || double.IsInfinity(width) || width <= 0)
+            return DefaultPanelWidth;
+        return Clamp(width, MinPanelWidth, MaxPanelWidth);
+    }
+
+    private void UpdateAdaptiveSizing(double width)
+    {
+        if (width <= 0)
+        {
+            width = DefaultPanelWidth;
+        }
+
+        var clamped = Clamp(width, MinPanelWidth, MaxPanelWidth);
+        var scale = Clamp(clamped / MaxPanelWidth, MinScale, 1.0);
+
+        IconPixelSize = Math.Max(14, _baseIconSize * scale);
+        GlyphFontSize = Math.Max(9, _baseGlyphSize * scale);
+        MaxLabelWidth = Math.Max(36, _baseLabelWidth * scale);
+        LabelFontSize = Math.Max(9, _baseLabelFontSize * scale);
+    }
+
+    private static double Clamp(double value, double min, double max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    private void SetDoubleField(ref double field, double value, string propertyName)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value)) return;
+        if (Math.Abs(field - value) < 0.1) return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void SetBoolField(ref bool field, bool value, string propertyName)
+    {
+        if (field == value) return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     private static string SafeFileNameOrUrlHost(string target)
@@ -261,11 +514,18 @@ public partial class ShortcutsPanel : UserControl, INotifyPropertyChanged
 
     private void OnShortcutPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _dragStartPoint = null;
+        if (IsScrollComponent(e.OriginalSource)) return;
         _dragStartPoint = e.GetPosition(null);
     }
 
     private void OnShortcutPreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (IsScrollComponent(e.OriginalSource))
+        {
+            _dragStartPoint = null;
+            return;
+        }
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (_dragStartPoint is null) return;
         var position = e.GetPosition(null);

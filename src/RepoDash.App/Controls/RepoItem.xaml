@@ -22,6 +22,7 @@
   <Grid Margin="0,4"
         ToolTip="{Binding Path, Mode=OneTime}"
         Background="Transparent"
+        ClipToBounds="True"
         MouseLeftButtonDown="OnRootMouseLeftButtonDown">
     <Grid.ColumnDefinitions>
       <ColumnDefinition/>
@@ -55,12 +56,19 @@
         </TextBlock.Style>
       </TextBlock>
 
-      <StackPanel Grid.Column="1">
-        <StackPanel Orientation="Horizontal">
-          <TextBlock>
+      <StackPanel Grid.Column="1" ClipToBounds="True">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0"
+                     TextTrimming="CharacterEllipsis"
+                     TextWrapping="NoWrap">
             <Run Text="{Binding Name}" FontWeight="SemiBold"/>
           </TextBlock>
-          <Button FontSize="10"
+          <Button Grid.Column="1"
+                  FontSize="10"
                   Padding="6,0"
                   Margin="5,0"
                   BorderThickness="0"
@@ -73,8 +81,12 @@
             <TextBlock Text="{Binding StoryReference}"
                        Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
           </Button>
-        </StackPanel>
-        <TextBlock FontSize="10" Margin="0,2,0,0" FontWeight="SemiBold">
+        </Grid>
+        <TextBlock FontSize="10"
+                   Margin="0,2,0,0"
+                   FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis"
+                   TextWrapping="NoWrap">
           <TextBlock.Style>
             <Style TargetType="TextBlock">
               <Setter Property="Foreground" Value="{StaticResource BrushTextSubtle}"/>

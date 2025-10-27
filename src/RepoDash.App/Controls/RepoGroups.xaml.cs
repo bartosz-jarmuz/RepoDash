@@ -1,9 +1,12 @@
+using System.Windows.Media.Media3D;
+
 namespace RepoDash.App.Controls;
 
 using RepoDash.App.ViewModels;
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -25,11 +28,18 @@ public partial class RepoGroups : UserControl
 
     private void OnGroupPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _dragStartPoint = null;
+        if (IsScrollComponent(e.OriginalSource)) return;
         _dragStartPoint = e.GetPosition(null);
     }
 
     private void OnGroupPreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (IsScrollComponent(e.OriginalSource))
+        {
+            _dragStartPoint = null;
+            return;
+        }
         if (e.LeftButton != MouseButtonState.Pressed) return;
         if (_dragStartPoint is null) return;
 
@@ -210,5 +220,22 @@ public partial class RepoGroups : UserControl
         _dropIndicator = null;
         _dropIndicatorElement = null;
         _dropIndicatorLayer = null;
+    }
+
+    private static bool IsScrollComponent(object? origin)
+    {
+        if (origin is not DependencyObject dep) return false;
+
+        while (dep is not null)
+        {
+            if (dep is ScrollBar or ScrollViewer)
+                return true;
+            if (dep is Visual or Visual3D)
+                dep = VisualTreeHelper.GetParent(dep);
+            else
+                return false;
+        }
+
+        return false;
     }
 }
